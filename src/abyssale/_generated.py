@@ -322,7 +322,7 @@ class Design(BaseModel):
         str | None,
         Field(
             deprecated=True,
-            description='Deprecated, superseded by `project_name`. On the `GET /designs` listing it mirrors `project_name`; on a single-design read it is whatever the platform stored on the row and may be `null` or differ. `category_*` names the grouping of a WORKSPACE TEMPLATE — a design belongs to a project, so read `project_name`.',
+            description='Deprecated, superseded by `project_name`, which it mirrors on every read — the platform reads both from the same `company_template_category` row, the table that holds projects. `null` when the design is in no project. `category_*` names the grouping of a WORKSPACE TEMPLATE — a design belongs to a project, so read `project_name`.',
             examples=['Fall campaigns'],
         ),
     ] = None
@@ -330,7 +330,7 @@ class Design(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-08-17'],
+            examples=['v2026-08-20'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1517,7 +1517,7 @@ class DuplicationRequest(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-08-17'],
+            examples=['v2026-08-20'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1656,7 +1656,7 @@ class DynamicImageResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-08-17'],
+            examples=['v2026-08-20'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1979,7 +1979,7 @@ class ErrorResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-08-17'],
+            examples=['v2026-08-20'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2715,7 +2715,7 @@ class DuplicationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-08-17'],
+            examples=['v2026-08-20'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2746,7 +2746,7 @@ class GenerationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-08-17'],
+            examples=['v2026-08-20'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None

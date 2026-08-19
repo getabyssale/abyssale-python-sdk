@@ -97,4 +97,4 @@ and how to add an endpoint.
 
 - [Documentation](https://developers.abyssale.com/sdks/python)
 - [API reference](https://api-reference.abyssale.com)
-- [Node.js SDK](https://www.npmjs.com/package/@abyssale/sdk)
+- [OpenAPI spec](https://api-reference.abyssale.com/api.yaml) — the contract this SDK is generated from

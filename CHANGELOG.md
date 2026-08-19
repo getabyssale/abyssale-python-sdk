@@ -6,8 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [1.0.0] — 2026-08-19
 
-First release. Feature parity with `@abyssale/sdk` 1.1.0: the same 18 endpoints and the same two
-polling helpers, generated from the same published OpenAPI spec.
+First release. Covers **every operation in the published OpenAPI spec** — 18 of them — plus two
+polling helpers over the spec's status endpoints. Response models are generated from the spec's
+schemas.
 
 ### Added
 
@@ -21,7 +22,7 @@ polling helpers, generated from the same published OpenAPI spec.
   resets on any successful poll. Partial success resolves: a finalized request carrying both banners
   and per-format errors is a result, not an exception. Only a request that finalized with no banners
   at all and at least one error raises.
-- Retries, ported rule-for-rule from the Node SDK's middleware: 5xx on idempotent methods only
+- Retries, following the spec's error contract: 5xx on idempotent methods only
   (every POST bills credits, and a 504 does not mean the render did not happen); the full ladder for
   a `429` carrying `Retry-After`; exactly one one-second probe for a bare `429`, because
   `rate_limit_exceeded` conflates spent credits with the gateway's per-second ceiling;
@@ -30,8 +31,8 @@ polling helpers, generated from the same published OpenAPI spec.
   machine-readable `id` is always on the exception, and `errors` holds the per-field problems when
   the failure was a payload problem.
 - Pydantic response models generated from the spec, with the Alpha design-import surface stripped by
-  `scripts/fetch_spec.py` exactly as the Node SDK strips it.
-- Seven runnable examples in `examples/`, one for one with the Node SDK's.
+  `scripts/fetch_spec.py`, since the spec marks that surface Alpha.
+- Seven runnable examples in `examples/`, each exercising a documented operation end to end.
 
 ### Notes
 

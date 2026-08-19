@@ -1,8 +1,8 @@
 """Settings resolution: explicit argument, then environment variable, then default.
 
-The Node SDK reads the environment once at *import* time and throws if the key is missing. That
-does not port: a module that explodes on import is hostile in Python, and it makes a second key (a
-second workspace) unrepresentable. Here, config is per-client and resolved in the constructor.
+Config is per-client and resolved in the constructor, not read once at import time: a module that
+explodes on import is hostile in Python, and import-time config makes a second key — a second
+workspace — unrepresentable.
 """
 
 from __future__ import annotations
@@ -37,7 +37,8 @@ def resolve_base_url(base_url: str | None) -> str:
 
 
 def resolve_timeout(timeout: float | None) -> float:
-    """Timeout in **seconds**. The env var is in milliseconds, for parity with the Node SDK."""
+    """Timeout in **seconds**. The env var is in milliseconds, matching how the API documents
+    its own millisecond fields (`next_check_after_ms`)."""
     if timeout is not None:
         if timeout <= 0:
             raise AbyssaleConfigError(f"[abyssale] timeout must be a positive number of seconds, got {timeout!r}")

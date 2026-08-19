@@ -130,8 +130,7 @@ def validate(model: type[M], data: Any) -> M:
       moved ahead of the published spec still parses and the new field is readable.
     - A field the spec calls required but the response omits does not raise. The spec is
       hand-maintained and the API is the authority: if it answered 200, the caller gets the data.
-      Raising here would turn a documentation lag into an outage, and the Node SDK — whose types are
-      erased at runtime — would have returned the body happily. The attribute is simply absent, so
+      Raising here would turn a documentation lag into an outage. The attribute is simply absent, so
       ``getattr(obj, "x", None)`` is the safe read for anything you are not sure of.
 
     The fallback is field-local: everything that validates is still a typed model, and only the

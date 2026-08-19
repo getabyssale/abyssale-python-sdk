@@ -1,13 +1,16 @@
 """The synchronous client.
 
-Method names, arguments and semantics mirror ``abyssale-nodejs-sdk/src/index.ts`` one for one,
-snake_cased. The one deliberate difference is the error contract: these methods return the parsed
-result and **raise** on failure, where the Node SDK returns ``{data, error, response}``.
+**One method per operation in the OpenAPI spec**, named after that operation's ``operationId``,
+snake_cased: ``listDesigns`` → :meth:`Abyssale.list_designs`, ``generateMultiPagePdf`` →
+:meth:`Abyssale.generate_multi_page_pdf`. There are no methods beyond the spec's operations, except
+the two ``wait_for_*`` helpers, which drive a documented polling endpoint rather than adding a call.
+``tests/test_async_parity.py`` pins the mapping, so an operation cannot be added to the spec and
+quietly missed here.
 
 Request bodies are plain dicts, not models. The spec's ``elements`` schema is an ``anyOf`` of ten
 deliberately overlapping branches with no discriminator — an element payload carries no type field,
 because the layer's type comes from the design — so nothing can validate it offline, and a model
-would only mis-coerce. Responses *are* models: their shapes are unambiguous.
+would only mis-coerce. Responses *are* models, generated from the spec's schemas.
 """
 
 from __future__ import annotations
@@ -254,7 +257,7 @@ class Abyssale:
         path = encode_path("/async/banner-builder/{design_id}/generate", design_id=design_id)
         return validate(GenerationRequestAccepted, self._request("POST", path, json=body))
 
-    def generate_multipage_pdf(self, design_id: str, body: Body) -> GenerationRequestAccepted:
+    def generate_multi_page_pdf(self, design_id: str, body: Body) -> GenerationRequestAccepted:
         """Asynchronously generate a multi-page print-ready PDF from a ``printer_multipage`` design.
 
         Each key in ``pages`` defines the element overrides for that page.
@@ -263,7 +266,7 @@ class Abyssale:
         -------
         ::
 
-            accepted = client.generate_multipage_pdf(design_id, {
+            accepted = client.generate_multi_page_pdf(design_id, {
                 "pages": {
                     "page_1": {"root": {"background_color": "#FFFFFF"}},
                     "page_2": {"root": {"background_color": "#000000"}},

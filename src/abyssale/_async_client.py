@@ -4,7 +4,8 @@ Deliberately a mirror rather than an abstraction. All the logic that could actua
 (retry classification, the poll schedule, response parsing, config) lives in shared transport-free
 modules; what is duplicated here is a set of one-line delegations, and eighty trivial lines are
 cheaper than the indirection needed to generate them. ``tests/test_async_parity.py`` fails if a
-method is added to one client and not the other, so the mirror cannot silently rot.
+method is added to one client and not the other — and if either drifts from the spec's
+``operationId`` list — so the mirror cannot silently rot.
 
 Read :mod:`abyssale._client` for the per-method documentation; the docstrings here are short on
 purpose to keep the two files diffable.
@@ -182,7 +183,7 @@ class AsyncAbyssale:
         path = encode_path("/async/banner-builder/{design_id}/generate", design_id=design_id)
         return validate(GenerationRequestAccepted, await self._request("POST", path, json=body))
 
-    async def generate_multipage_pdf(self, design_id: str, body: Body) -> GenerationRequestAccepted:
+    async def generate_multi_page_pdf(self, design_id: str, body: Body) -> GenerationRequestAccepted:
         """Asynchronously generate a multi-page PDF from a ``printer_multipage`` design."""
         path = encode_path("/async/banner-builder/{design_id}/generate-multipage-pdf", design_id=design_id)
         return validate(GenerationRequestAccepted, await self._request("POST", path, json=body))

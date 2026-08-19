@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 """Fetch the public OpenAPI spec and strip the Alpha design-import surface.
 
-Port of ``abyssale-nodejs-sdk/scripts/fetch-spec.mjs`` — the exclusion lists below MUST stay
-identical to the ones there, or the two SDKs would ship different surfaces from the same spec.
-
-Why this exists: generating straight from the published spec silently pulls in every
-``DesignImport*`` path and schema. The exclusion is deliberate — the design-import API is in Alpha
-and its contract may change without notice. Doing it here makes the exclusion reproducible instead
-of a manual step someone has to remember.
+The spec is the single source of truth for this SDK, with one carve-out: the design-import surface
+is marked **Alpha** in the spec and its contract may change without notice, so it is stripped before
+models are generated. Doing it here makes the carve-out reproducible instead of a manual step
+someone has to remember.
 
 Delete this script (and the ``EXCLUDED_*`` lists) once the design-import API is declared stable.
 """

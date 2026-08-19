@@ -1,13 +1,13 @@
 """Multi-page print-ready PDF generation.
 
-generate_multipage_pdf() is for designs of type "printer_multipage". `pages` is a dictionary keyed
+generate_multi_page_pdf() is for designs of type "printer_multipage". `pages` is a dictionary keyed
 by page layer name — each entry can override the root background color for that page.
 The result is a single PDF file, ready for commercial printing (crop marks, CMYK color profile).
 
 wait_for_generation_request() handles polling automatically.
 
 Run:
-    ABYSSALE_API_KEY=your-key python generate_multipage_pdf.py
+    ABYSSALE_API_KEY=your-key python generate_multi_page_pdf.py
 """
 
 import sys
@@ -18,7 +18,7 @@ DESIGN_ID = "your-multipage-design-id"
 
 with Abyssale() as client:
     try:
-        accepted = client.generate_multipage_pdf(
+        accepted = client.generate_multi_page_pdf(
             DESIGN_ID,
             {
                 "pages": {

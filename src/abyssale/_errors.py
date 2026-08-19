@@ -1,9 +1,8 @@
 """The exception hierarchy.
 
-Unlike the Node SDK — which returns ``{data, error, response}`` and never throws on an HTTP error —
-the Python client **raises**. Returning a result object would be unidiomatic here and would make
-every call site a two-line unpacking. The *classification* of what went wrong is identical in both
-SDKs; only how it is surfaced differs.
+The client **raises** rather than returning a result object, which would be unidiomatic here and
+would make every call site a two-line unpacking. What is raised comes straight from the spec's
+error contract.
 
 Every non-2xx answer from the API carries the same envelope — ``{"id", "message", "errors"?}`` at
 every status, on every endpoint — so :attr:`AbyssaleAPIError.id` is populated whenever the response

@@ -1,8 +1,12 @@
 """The polling loop, minus the sleeping.
 
-A port of ``pollUntil`` from ``abyssale-nodejs-sdk/src/index.ts``. Everything here is transport-free
-so the sync and async ``wait_for_*`` helpers share one implementation of the schedule, the
-transient-failure budget and the deadline; only the sleep differs between them.
+Drives the two status operations the spec documents as polling endpoints — ``getGenerationRequest``
+and ``getDuplicationRequest`` — whose responses carry the terminal condition (``is_finalized``, and
+``status`` reaching ``COMPLETED``/``ERROR``).
+
+Everything here is transport-free so the sync and async ``wait_for_*`` helpers share one
+implementation of the schedule, the transient-failure budget and the deadline; only the sleep
+differs between them.
 """
 
 from __future__ import annotations
@@ -109,8 +113,7 @@ class PollLoop:
         A 5xx or a real throttle says nothing about the generation itself, while any other 4xx is a
         verdict — ``generation_request_not_found`` must fail on the first poll rather than be
         re-asked for 30 minutes. The classification is :func:`plan_retry`, the same one the request
-        loop uses, so the two cannot drift; they had, in the Node SDK, and the poll retried *every*
-        429 including the permanent ones.
+        loop uses, so the two cannot drift into disagreeing about which 429 is worth re-asking.
         """
         if isinstance(err, AbyssaleAPIError):
             plan = plan_retry(err.response, err.id)

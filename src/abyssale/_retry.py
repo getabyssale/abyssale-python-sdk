@@ -1,12 +1,12 @@
-"""Retry classification — a port of ``abyssale-nodejs-sdk/src/middleware.ts``.
+"""Retry classification.
+
+Derived from the error contract in the OpenAPI spec, not from a generic "retry 429 and 5xx" rule.
+The spec documents three distinct refusals behind `429` — `request_rate_limited`,
+`rate_limit_exceeded` and `feature_not_in_plan` — and only one of them is worth waiting out; see
+:func:`plan_retry` for what each means and why a bare `429` gets exactly one probe.
 
 Transport-free on purpose: the sync client, the async client and both polling loops all call
-:func:`plan_retry`, so the rules cannot drift between them. They already had, once, in the Node SDK.
-
-None of the ``AbortSignal`` / ``WeakMap`` / ``request.clone()`` apparatus from the TypeScript
-version is needed here. All of it existed because ``fetch`` consumes a request's body stream, so a
-retried POST could not be re-dispatched; an ``httpx.Request`` is re-dispatchable as many times as
-you like.
+:func:`plan_retry`, so the rules cannot drift between them.
 """
 
 from __future__ import annotations

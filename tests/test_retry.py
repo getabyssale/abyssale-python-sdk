@@ -1,7 +1,8 @@
 """The retry truth table.
 
-These are the rules ported from the Node SDK's `middleware.ts`; each one exists because getting it
-wrong has a specific cost, spelled out in the docstrings there.
+Each rule follows from the error contract the OpenAPI spec documents — three distinct refusals
+behind `429`, of which only one is worth waiting out — and exists because getting it wrong has a
+specific cost, spelled out in `abyssale._retry`.
 """
 
 from __future__ import annotations

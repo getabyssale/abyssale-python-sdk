@@ -8,6 +8,7 @@ the methods someone remembered to write it for.
 from __future__ import annotations
 
 import inspect
+import re
 
 import pytest
 
@@ -30,6 +31,49 @@ def test_the_two_clients_expose_the_same_methods() -> None:
     assert SYNC_METHODS == ASYNC_METHODS
 
 
+#: Every `operationId` in the published OpenAPI spec, with the Alpha design-import surface stripped
+#: (see `scripts/fetch_spec.py`). Pinned as a literal so the suite needs no network, and updated by
+#: hand when the spec gains an operation — which is the point: it forces the addition to be noticed.
+SPEC_OPERATION_IDS = {
+    "verifyApiKey",
+    "listDesigns",
+    "getDesign",
+    "getDesignFormat",
+    "generateImage",
+    "generateMultiFormatMedia",
+    "generateMultiPagePdf",
+    "getGenerationRequest",
+    "getFile",
+    "listFonts",
+    "listProjects",
+    "createProject",
+    "exportBanners",
+    "createDynamicImageUrl",
+    "listWorkspaceTemplates",
+    "listWorkspaceTemplateCategories",
+    "duplicateWorkspaceTemplate",
+    "getDuplicationRequest",
+}
+
+#: The only methods that are not a spec operation. They drive the spec's two status endpoints on a
+#: schedule; they add no call of their own.
+HELPERS = {"wait_for_generation_request", "wait_for_duplication_request"}
+
+
+def snake(operation_id: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", operation_id).lower()
+
+
+def test_every_method_is_a_spec_operation() -> None:
+    """The method set IS the spec's operation set — no more, no less.
+
+    This is the rule the whole SDK is built on: one method per operation, named after its
+    `operationId` snake_cased. A method that is not a spec operation should not exist, and an
+    operation without a method is a gap.
+    """
+    assert SYNC_METHODS - HELPERS == {snake(op) for op in SPEC_OPERATION_IDS}
+
+
 def test_the_surface_is_the_eighteen_endpoints_plus_two_helpers() -> None:
     # Pinned so that adding an endpoint is a deliberate act, in both clients and in the docs.
     assert SYNC_METHODS == {
@@ -39,7 +83,7 @@ def test_the_surface_is_the_eighteen_endpoints_plus_two_helpers() -> None:
         "get_design_format",
         "generate_image",
         "generate_multi_format_media",
-        "generate_multipage_pdf",
+        "generate_multi_page_pdf",
         "get_generation_request",
         "get_file",
         "list_fonts",
