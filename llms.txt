@@ -1,0 +1,78 @@
+# Abyssale Python SDK
+
+## What is Abyssale?
+
+Abyssale is a programmatic creative asset generation API. It lets developers generate
+marketing visuals, ad creatives, animated GIFs, HTML5 banners, videos, and print-ready
+PDFs at scale — directly from code. Design a template once in the Abyssale editor, then
+generate thousands of personalised variations via a single API call, substituting text,
+images, colors, and other properties dynamically.
+
+## What is this SDK?
+
+`abyssale` is the official Python SDK for the Abyssale REST API. It provides a sync client
+(`Abyssale`) and an async client (`AsyncAbyssale`) with identical surfaces — 18 methods covering the
+full API, plus two polling helpers with exponential backoff. Built on `httpx`, with Pydantic
+response models generated from the OpenAPI spec. Configuration is read from the `ABYSSALE_API_KEY`
+environment variable or passed to the constructor.
+
+## Installation
+
+```
+pip install abyssale
+```
+
+Requires Python 3.10+. Set the environment variable `ABYSSALE_API_KEY` to your Abyssale API key, or
+pass `api_key=` to the client.
+
+## Methods
+
+Every method below exists on both `Abyssale` and `AsyncAbyssale`, with the same name and signature;
+the async ones are coroutines.
+
+- `verify_api_key()` — Verify the API key and return the workspace it belongs to; every failure is a 401
+- `list_designs(project_id=None, type=None)` — List all designs in the workspace, with optional filtering
+- `get_design(design_id, advanced=False)` — Full design spec: formats, elements, variables; `advanced=True` also returns `group` layers
+- `get_design_format(design_id, format_specifier)` — Get details for a specific format within a design, by name or UUID
+- `generate_image(design_id, body)` — Synchronously generate a single image; returns the file URL immediately
+- `generate_multi_format_media(design_id, body)` — Asynchronously generate multiple formats (image, GIF, video, HTML5, PDF) in one call
+- `generate_multipage_pdf(design_id, body)` — Asynchronously generate a multi-page print-ready PDF from a printer_multipage design
+- `get_generation_request(generation_request_id)` — Poll the status of an async generation request once
+- `wait_for_generation_request(generation_request_id, interval=None, max_interval=None, timeout=None)` — Poll with exponential backoff until complete; raises on timeout, and when the request finalized with no banners at all (partial success resolves — check `result.errors`)
+- `wait_for_duplication_request(duplicate_request_id, ...)` — Poll template duplication until COMPLETED or ERROR
+- `get_file(banner_id)` — Retrieve metadata and CDN download URL for a generated file
+- `list_fonts()` — List all fonts available in the workspace (Google Fonts + custom uploads)
+- `list_projects()` — List all projects in the workspace
+- `create_project(body)` — Create a new project to organise designs
+- `export_banners(body)` — Asynchronously package a set of banners into a ZIP archive for download
+- `create_dynamic_image_url(design_id, body=None)` — Create a live image URL that renders on-the-fly from query parameters
+- `list_workspace_templates(category_id=None, type=None)` — List organisation-level master designs
+- `list_workspace_template_categories()` — List the categories that group workspace templates
+- `duplicate_workspace_template(company_template_id, body)` — Copy a shared workspace template into a project
+- `get_duplication_request(duplicate_request_id)` — Poll the status of a template duplication request
+
+## Common use cases
+
+- **Personalised email headers**: Generate a unique image per recipient with their name, company logo, and offer — served via a dynamic image URL that renders on email open, no pre-generation needed.
+- **Bulk ad creative production**: Send a CSV of product data and generate hundreds of social media creatives (Facebook, Instagram, LinkedIn, Google Display) in every required format in a single async call.
+- **E-commerce product banners**: Dynamically swap product image, price, and promotional text into a branded template for each SKU, triggered automatically when inventory or pricing changes.
+- **Print-on-demand**: Generate personalised multi-page PDFs (brochures, catalogues, certificates) with different content per page, ready for commercial printing with crop marks and color profiles.
+- **HTML5 banner ads**: Produce animated HTML5 banners for ad networks (Google Ads, Adform, Amazon Ads, AdRoll) with click-tag and backup image, directly from your design templates.
+- **Website social cards**: Generate Open Graph and Twitter Card images on demand for any page, with the page title and thumbnail baked in.
+
+## Key features
+
+- Sync and async clients with identical surfaces, over `httpx`; both are context managers and both accept a caller-supplied `httpx` client
+- Pydantic response models generated from the OpenAPI spec, shipped with `py.typed`
+- Errors raise. Every failure is an `AbyssaleError`; a non-2xx is an `AbyssaleAPIError` (or `AbyssaleAuthError` / `AbyssaleNotFoundError` / `AbyssaleRateLimitError`) carrying the API's machine-readable `id`, its `message`, and `errors` — the per-field problems — when the request body was the problem. Branch on `id`, never on the message
+- Parsing never fails a successful response: unknown fields are kept, and a field the spec calls required but the response omits does not raise
+- Auto-retry with exponential backoff, deliberately narrow: `5xx` only on idempotent reads (a POST is never repeated, since it would bill a second generation), and `429` on a graded rule: with `Retry-After` it is a real throttle and gets the full ladder; without one it gets exactly ONE retry after 1 s, because `rate_limit_exceeded` covers both a spent credit balance (permanent) and the gateway's global 10 req/s ceiling (clears in under a second) and only that probe tells them apart; a bare `429` whose id is `feature_not_in_plan` is not retried at all. Default 3 retries, 30 s timeout — configurable via `ABYSSALE_MAX_RETRIES` and `ABYSSALE_TIMEOUT_MS`, or per client (0 disables retries, including the probe)
+- Built-in polling helpers (`wait_for_generation_request`, `wait_for_duplication_request`) with exponential backoff, jitter, and configurable timeout (default 30 min, min 1 min); they raise `AbyssalePollingError`, which carries the API error code on `.id`. A long wait survives blips: up to 3 consecutive transient poll failures are absorbed, using the same rule as the retry loop — a `5xx`, a network error, or a `429` carrying `Retry-After` (which the poll then waits for instead of its own interval). A bare `429` is probed once and then fatal, capped at one probe per wait rather than one in a row. A `404` fails immediately
+
+## Links
+
+- SDK reference (canonical): https://developers.abyssale.com/sdks/python
+- API documentation: https://developers.abyssale.com/rest-api
+- Developer hub: https://developers.abyssale.com
+- PyPI package: https://pypi.org/project/abyssale/
+- Node.js SDK: https://www.npmjs.com/package/@abyssale/sdk
