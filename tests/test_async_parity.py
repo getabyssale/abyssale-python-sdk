@@ -127,3 +127,22 @@ def test_the_constructors_agree() -> None:
     sync = inspect.signature(Abyssale.__init__)
     async_ = inspect.signature(AsyncAbyssale.__init__)
     assert list(sync.parameters) == list(async_.parameters)
+
+
+def test_the_declared_api_version_matches_the_changelog() -> None:
+    """`__api_version__` and the changelog must name the same API version.
+
+    They are two hand-maintained copies of one fact, and a release that updates only the changelog
+    ships a constant that lies about which contract the models came from.
+    """
+    import pathlib
+    import re
+
+    from abyssale import __api_version__, __version__
+
+    assert re.fullmatch(r"v\d{4}-\d{2}-\d{2}", __api_version__)
+
+    changelog = (pathlib.Path(__file__).parent.parent / "CHANGELOG.md").read_text()
+    row = re.search(rf"^\| {re.escape(__version__)} \| `(v[\d-]+)` \|", changelog, re.M)
+    assert row, f"CHANGELOG.md has no API-version row for SDK {__version__}"
+    assert row.group(1) == __api_version__

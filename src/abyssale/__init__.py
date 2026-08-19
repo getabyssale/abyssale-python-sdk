@@ -30,7 +30,7 @@ from ._errors import (
     AbyssalePollingError,
     AbyssaleRateLimitError,
 )
-from ._version import __version__
+from ._version import __api_version__, __version__
 from .models import (
     AuthResult,
     Banner,
@@ -63,6 +63,7 @@ __all__ = [
     "Abyssale",
     "AsyncAbyssale",
     "__version__",
+    "__api_version__",
     # Errors
     "AbyssaleAPIError",
     "AbyssaleAuthError",

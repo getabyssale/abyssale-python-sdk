@@ -4,11 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+**Every release names the API version it was generated from.** The API is versioned by release date
+(`vYYYY-MM-DD`) and one version is maintained at a time, so the pairing below tells you which
+contract a given SDK release models. The SDK's own version is independent — regenerating against a
+newer API version is a normal change, and whether it is a patch, minor or major depends on what the
+API changed.
+
+| SDK | API version | |
+|---|---|---|
+| 1.0.0 | `v2026-08-20` | [spec](https://api-reference.abyssale.com/api.yaml) |
+
 ## [1.0.0] — 2026-08-19
 
-First release. Covers **every operation in the published OpenAPI spec** — 18 of them — plus two
-polling helpers over the spec's status endpoints. Response models are generated from the spec's
-schemas.
+_Generated from API version **`v2026-08-20`**._
+
+First release. Covers **every operation in that spec** — 18 of them — plus two polling helpers over
+its status endpoints. Response models are generated from its schemas.
 
 ### Added
 

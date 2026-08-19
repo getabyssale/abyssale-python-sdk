@@ -121,6 +121,10 @@ Bump the version in **both** `pyproject.toml` and `src/abyssale/_version.py` —
 User-Agent, and a release that bumps only one ships a User-Agent that lies. Update `CHANGELOG.md`,
 then tag `vX.Y.Z`. Manual semver, no CI publish.
 
+**If you regenerated against a newer spec, update `__api_version__` and the SDK-to-API table at the
+top of `CHANGELOG.md`** — take the value from the spec's `info.version`. A test asserts the constant
+and the table agree, so they cannot drift apart, but nothing can tell you the pair is *stale*.
+
 The SDK version is its own — it does not track the API's `vYYYY-MM-DD` version. Regenerating against
 a new spec release is a normal change like any other; whether it is a minor or a major depends on
 what the spec changed.
