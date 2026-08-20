@@ -15,6 +15,47 @@ from uuid import UUID
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 
 
+class SigningSecret(BaseModel):
+    """
+    The workspace's webhook signing secret and the state of any rotation in progress.
+
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    secret: Annotated[
+        str,
+        Field(
+            description='The secret to verify `X-Abyssale-Signature` with. Prefixed `whsec_` so it is\nrecognisable if it turns up somewhere it should not.\n',
+            examples=[
+                'whsec_2f1a8c4e6b9d0a7c3e5f8b1d4a6c9e2f0b3d5a7c1e4f6b8d0a2c5e7f9b1d3a5c'
+            ],
+        ),
+    ]
+    created_at_ts: Annotated[
+        int | None,
+        Field(
+            description='Unix second the secret was first issued.',
+            examples=[1755561234],
+        ),
+    ] = None
+    rotated_at_ts: Annotated[
+        int | None,
+        Field(
+            description='Unix second of the most recent rotation, or `null` if the secret has never been rotated.\n',
+            examples=[None],
+        ),
+    ] = None
+    previous_secret_expires_at_ts: Annotated[
+        int | None,
+        Field(
+            description="When the previous secret stops being honoured — 24 hours after the rotation that\ndemoted it. `null` when there is no overlap in progress, either because nothing was\nrotated, because the window has lapsed, or because it was ended with\n`POST /signing-secret/revoke`.\n\nWhile this is set, deliveries carry **two** `v1` hashes and a receiver holding either\nsecret verifies. The previous secret's value is never returned — only its expiry.\n",
+            examples=[None],
+        ),
+    ] = None
+
+
 class Warning(BaseModel):
     """
     One non-fatal note attached to an otherwise successful response — the `warnings` array on
@@ -1965,7 +2006,7 @@ class ErrorResponse(BaseModel):
     id: Annotated[
         str,
         Field(
-            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unreachable_src`, `invalid_query_param`, `invalid_filetype`,\n`invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These two are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`.\n\n**Retrying never helps — something has to change first.** The plan or the credit\nbalance: `feature_not_in_plan`, `api_access_denied`. Note that `rate_limit_exceeded`\nlands here too when it means "not enough credits"; the message is what tells the two\napart, which is why both entries name it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
+            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unreachable_src`, `invalid_query_param`, `invalid_filetype`,\n`invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These two are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`.\n\n**Retrying never helps — something has to change first.** The plan or the credit\nbalance: `feature_not_in_plan`, `api_access_denied`. Note that `rate_limit_exceeded`\nlands here too when it means "not enough credits"; the message is what tells the two\napart, which is why both entries name it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`,\n`previous_secret_still_active`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
         ),
     ]
     errors: Annotated[

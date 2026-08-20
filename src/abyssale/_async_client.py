@@ -47,6 +47,7 @@ from .models import (
     GenerationRequestStatus,
     Project,
     ProjectSummary,
+    SigningSecret,
     WorkspaceTemplate,
     WorkspaceTemplateCategory,
 )
@@ -152,6 +153,29 @@ class AsyncAbyssale:
     async def verify_api_key(self) -> AuthResult:
         """Verify the API key and return the workspace it belongs to."""
         return validate(AuthResult, await self._request("POST", "/auth"))
+
+    # ── Webhook signing secret ────────────────────────────────────────────────
+
+    async def get_signing_secret(self) -> SigningSecret:
+        """Get the workspace's webhook signing secret, creating it on the first call.
+
+        Deliveries are unsigned until this is called once. Verify them with
+        :func:`abyssale.webhooks.verify_webhook_signature`.
+        """
+        return validate(SigningSecret, await self._request("GET", "/signing-secret"))
+
+    async def rotate_signing_secret(self, *, force: bool = False) -> SigningSecret:
+        """Rotate the signing secret, keeping the previous one valid for 24 hours.
+
+        A second rotate inside that window raises :class:`AbyssaleAPIError` with
+        ``id="previous_secret_still_active"`` unless ``force=True``.
+        """
+        query = {"force": True} if force else None
+        return validate(SigningSecret, await self._request("POST", "/signing-secret/rotate", query=query))
+
+    async def revoke_signing_secret(self) -> SigningSecret:
+        """Invalidate the previous secret immediately, ending the rotation overlap early."""
+        return validate(SigningSecret, await self._request("POST", "/signing-secret/revoke"))
 
     # ── Designs ───────────────────────────────────────────────────────────────
 

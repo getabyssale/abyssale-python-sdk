@@ -47,6 +47,56 @@ async def main():
 asyncio.run(main())
 ```
 
+## Verifying webhook deliveries
+
+Abyssale signs every delivery once the workspace has a signing secret, so a receiver can tell a real
+delivery from anything else that finds the URL. Fetch the secret once and store it like a password:
+
+```python
+secret = client.get_signing_secret().secret     # mints it on the first call
+```
+
+Verify with the raw request body. `abyssale.webhooks` imports only the standard library — no client,
+no `httpx` — so a receiver process needs no API key:
+
+```python
+from abyssale.webhooks import verify_webhook_signature
+
+@app.post("/webhooks/abyssale")
+def receive():
+    if not verify_webhook_signature(
+        request.get_data(),                      # RAW bytes, exactly as received
+        request.headers.get("X-Abyssale-Signature"),
+        SIGNING_SECRET,
+    ):
+        return "", 401
+    ...
+```
+
+Four things decide whether this works:
+
+- **Pass the raw bytes.** The signature covers what was sent, so a parsed-and-re-serialised dict
+  reorders keys and never matches. `request.get_data()` in Flask, `await request.body()` in FastAPI,
+  `request.body` in Django — never `json.dumps(request.json)`.
+- **It returns `False` and never raises** — on a missing, malformed, forged or stale header alike.
+  Anyone who finds your URL can POST to it, and an exception in a handler is a 500.
+- **A rotation puts two signatures in the header.** For 24 hours after `rotate_signing_secret()`
+  every delivery carries one `v1` per valid secret, so a receiver holding either one verifies and
+  you can deploy on your own schedule. Every `v1` is checked.
+- **Deduplicate on `X-Abyssale-Delivery-Id`**, 64 lowercase hex characters. It is present whether or
+  not the delivery is signed and does not change between attempts — a delivery that exhausts the
+  retry ladder arrives six times with the same id, while the signature's `t` is new each time. The
+  id identifies a delivery, not an event: one event fanned out to several subscribed URLs gives each
+  subscription its own id, which is all deduplication needs but is not a value two of your endpoints
+  can correlate on. Use the payload's own ids for that.
+
+Until `get_signing_secret()` is called once, deliveries are **unsigned** — fetching the secret is
+what turns signing on. `rotate_signing_secret()` refuses a second rotate inside the 24-hour window
+with `AbyssaleAPIError(id="previous_secret_still_active")`, because it would drop the secret your
+receiver is still using; `revoke_signing_secret()` ends the overlap deliberately.
+
+`examples/generate_multi_format_media_webhook.py` is a complete receiver doing all of this.
+
 ## Errors
 
 Methods return the result and **raise** on failure. Branch on the API's machine-readable `id`, not
