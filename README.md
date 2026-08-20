@@ -104,6 +104,7 @@ and how to add an endpoint.
 
 ## Links
 
+- [Abyssale](https://www.abyssale.com) — the product this SDK talks to
 - [Documentation](https://developers.abyssale.com/sdks/python)
 - [API reference](https://api-reference.abyssale.com)
 - [OpenAPI spec](https://api-reference.abyssale.com/api.yaml) — the contract this SDK is generated from

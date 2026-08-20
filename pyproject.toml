@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://developers.abyssale.com"
+Homepage = "https://www.abyssale.com"
 Documentation = "https://developers.abyssale.com/sdks/python"
 "API Reference" = "https://api-reference.abyssale.com"
 Repository = "https://github.com/getabyssale/abyssale-python-sdk"
