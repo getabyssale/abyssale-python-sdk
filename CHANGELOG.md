@@ -14,7 +14,7 @@ API changed.
 |---|---|---|
 | 1.0.0 | `v2026-08-20` | [spec](https://api-reference.abyssale.com/api.yaml) |
 
-## [1.0.0] — 2026-08-19
+## [1.0.0] — 2026-08-20
 
 _Generated from API version **`v2026-08-20`**._
 
@@ -37,7 +37,17 @@ its status endpoints. Response models are generated from its schemas.
   (every POST bills credits, and a 504 does not mean the render did not happen); the full ladder for
   a `429` carrying `Retry-After`; exactly one one-second probe for a bare `429`, because
   `rate_limit_exceeded` conflates spent credits with the gateway's per-second ceiling;
-  `feature_not_in_plan` never retried.
+  `feature_not_in_plan` never retried, whatever headers the response carries — no window makes a
+  plan restriction clear.
+- `max_retry_wait` (`$ABYSSALE_MAX_RETRY_WAIT_MS`, default 30s) — the longest single `Retry-After`
+  the SDK will sleep through on your behalf. The rate limiter can name a cool-off of ~1700s once a
+  quota is spent, and `max_retries` multiplies it, so honouring it blindly would turn one call into
+  83 minutes of silence with no way to intervene. Past the bound the call fails immediately with
+  `AbyssaleRateLimitError`, `retry_after` carrying the server's figure so the decision is yours.
+  Applies to any server-named wait, including a 5xx that carries `Retry-After` and one absorbed by a
+  `wait_for_*` poll — a 30-minute deadline has room to sleep off a 28-minute cool-off in one go, and
+  the bound is what refuses it. The SDK's own backoff and the bare-`429` probe are unaffected. Pass
+  `math.inf` to wait however long the server asks.
 - An exception hierarchy under `AbyssaleError`, built from the API's single error envelope — the
   machine-readable `id` is always on the exception, and `errors` holds the per-field problems when
   the failure was a payload problem.

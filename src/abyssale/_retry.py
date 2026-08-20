@@ -12,6 +12,7 @@ Transport-free on purpose: the sync client, the async client and both polling lo
 from __future__ import annotations
 
 import email.utils
+import math
 import random
 import time
 from collections.abc import Generator
@@ -33,8 +34,8 @@ IDEMPOTENT_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 #: failure when the refusal turns out to be permanent.
 CEILING_PROBE_DELAY_SECONDS = 1.0
 
-#: Error ids that answer 429 and are known to be permanent for this key, so not even the probe
-#: below is worth spending.
+#: Error ids that answer 429 and are known to be permanent for this key, so neither the probe below
+#: nor a ``Retry-After`` the response happens to carry is worth spending time on.
 #:
 #: ``rate_limit_exceeded`` is deliberately NOT here even though it is permanent when it means "out
 #: of credits" — see :func:`plan_retry` for why it cannot be classified from the id alone.
@@ -80,7 +81,7 @@ def read_error_id(response: Any) -> str | None:
     return body["id"] if isinstance(body, dict) and isinstance(body.get("id"), str) else None
 
 
-def plan_retry(response: Any, error_id: str | None = None) -> RetryPlan | None:
+def plan_retry(response: Any, error_id: str | None = None, *, max_retry_wait: float = math.inf) -> RetryPlan | None:
     """Whether a response is worth asking for again, ignoring the request method.
 
     The single derivation of that question, used by the request loop and by the polling helpers.
@@ -92,7 +93,11 @@ def plan_retry(response: Any, error_id: str | None = None) -> RetryPlan | None:
 
     - ``request_rate_limited`` — the per-workspace endpoint budget. The edge sends ``Retry-After``
       alongside it, so it is unambiguous and gets the full retry ladder.
-    - ``feature_not_in_plan`` — your plan excludes this design type. Permanent; never retried.
+    - ``feature_not_in_plan`` — your plan excludes this design type. Permanent; never retried, **even
+      when the response carries a** ``Retry-After``. A named window is a claim that waiting helps,
+      and for a plan restriction it cannot be: the feature will not appear in five seconds. A header
+      on this refusal is far more likely to be generic rate-limit middleware stamping every 429 that
+      passes through it than a statement about this one, so the id wins.
     - ``rate_limit_exceeded`` — **two different things under one id.** Either the plan's credits are
       spent (permanent), or the gateway's global 10 req/s ceiling was hit (clears in under a
       second). Only ``message`` distinguishes them, and the ceiling is enforced at the GATEWAY, one
@@ -107,19 +112,34 @@ def plan_retry(response: Any, error_id: str | None = None) -> RetryPlan | None:
     So it gets exactly **one** probe after a fixed second. Being wrong costs one second on a call
     that was failing anyway; being right rescues a call that would otherwise have failed outright.
     That asymmetry, not a confident classification, is the argument.
+
+    ``max_retry_wait`` bounds how long a server-named window is worth honouring. Believing an
+    arbitrarily long ``Retry-After`` means a spent quota can block a single call for the better part
+    of an hour, silently, with ``max_retries`` multiplying it — so past the bound the answer is "not
+    worth retrying", and the caller gets the error immediately with ``retry_after`` still on it.
+    That is a decision about the caller's patience, not about the API, which is why it is a setting
+    rather than a constant.
     """
     if response.status_code in RETRYABLE_SERVER_STATUSES:
-        return RetryPlan(probe=False, delay=retry_after_seconds(response))
+        return _within_budget(RetryPlan(probe=False, delay=retry_after_seconds(response)), max_retry_wait)
     if response.status_code != 429:
         return None
 
+    # A permanent id outranks the header: no window makes a plan restriction clear.
+    if error_id and error_id in PERMANENT_429_CODES:
+        return None
     after = retry_after_seconds(response)
     # It told us when to come back, so it is a real throttle and we believe it.
     if after is not None:
-        return RetryPlan(probe=False, delay=after)
-    if error_id and error_id in PERMANENT_429_CODES:
-        return None
+        return _within_budget(RetryPlan(probe=False, delay=after), max_retry_wait)
     return RetryPlan(probe=True, delay=CEILING_PROBE_DELAY_SECONDS)
+
+
+def _within_budget(plan: RetryPlan, max_retry_wait: float) -> RetryPlan | None:
+    """Drop a plan whose wait exceeds what the caller is willing to sit out."""
+    if plan.delay is not None and plan.delay > max_retry_wait:
+        return None
+    return plan
 
 
 def is_retryable_for_method(response: Any, method: str) -> bool:
@@ -134,12 +154,18 @@ def backoff_delay(attempt: int) -> float:
     return float(2 ** (attempt - 1)) + random.random() * 0.1
 
 
-def _plan_for(response: Any) -> RetryPlan | None:
+def _plan_for(response: Any, max_retry_wait: float) -> RetryPlan | None:
     # The body is only read for a bare 429, where the id can rule the retry out entirely.
-    return plan_retry(response, read_error_id(response) if response.status_code == 429 else None)
+    return plan_retry(
+        response,
+        read_error_id(response) if response.status_code == 429 else None,
+        max_retry_wait=max_retry_wait,
+    )
 
 
-def retry_schedule(response: Any, method: str, max_retries: int) -> Generator[float, Any, None]:
+def retry_schedule(
+    response: Any, method: str, max_retries: int, max_retry_wait: float = math.inf
+) -> Generator[float, Any, None]:
     """The retry schedule for one request, as a generator of delays in seconds.
 
     Shared by the sync and the async client so the two cannot drift; each ``send`` the caller makes
@@ -156,7 +182,7 @@ def retry_schedule(response: Any, method: str, max_retries: int) -> Generator[fl
     what the caller gets — and stops early on a success, a verdict, or a bare 429 whose probe was
     the attempt just made.
     """
-    plan = _plan_for(response)
+    plan = _plan_for(response, max_retry_wait)
     if plan is None or not is_retryable_for_method(response, method):
         return
     attempts = attempts_for(plan, max_retries)
@@ -166,7 +192,7 @@ def retry_schedule(response: Any, method: str, max_retries: int) -> Generator[fl
         latest = yield (after if after is not None else backoff_delay(attempt))
         if attempt == attempts:
             return
-        plan = _plan_for(latest)
+        plan = _plan_for(latest, max_retry_wait)
         if plan is None or plan.probe:
             return
         after = plan.delay

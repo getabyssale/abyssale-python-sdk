@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import httpx
 import pytest
 import respx
@@ -142,6 +144,43 @@ class TestWaitForGenerationRequest:
         assert caught.value.id == "rate_limit_exceeded"
         # One probe inside the request loop, then the poll's own single absorption.
         assert route.call_count <= 4
+
+    def test_a_cool_off_past_the_wait_budget_ends_the_poll(self, respx_mock: respx.MockRouter) -> None:
+        """The deadline bounds the whole wait, not one silence inside it.
+
+        A 30-minute poll has room to sleep off a 28-minute `Retry-After` in a single go, which is
+        exactly what `max_retry_wait` exists to refuse — so the poll ends here rather than going
+        quiet for the rest of its budget.
+        """
+        route = respx_mock.get(f"{BASE_URL}/generation-request/{REQUEST_ID}").mock(
+            return_value=httpx.Response(429, json=error_body("request_rate_limited"), headers={"retry-after": "1659"})
+        )
+        with Abyssale(api_key="k", base_url=BASE_URL, max_retry_wait=30.0) as client:
+            with pytest.raises(AbyssalePollingError) as caught:
+                client.wait_for_generation_request(REQUEST_ID)
+        assert caught.value.id == "request_rate_limited"
+        assert route.call_count == 1
+
+    def test_a_cool_off_inside_the_wait_budget_is_still_absorbed(self, respx_mock: respx.MockRouter) -> None:
+        respx_mock.get(f"{BASE_URL}/generation-request/{REQUEST_ID}").mock(
+            side_effect=[
+                httpx.Response(429, json=error_body("request_rate_limited"), headers={"retry-after": "5"}),
+                httpx.Response(200, json=status(finalized=True, banners=[BANNER])),
+            ]
+        )
+        with Abyssale(api_key="k", base_url=BASE_URL, max_retry_wait=30.0) as client:
+            assert client.wait_for_generation_request(REQUEST_ID).is_finalized
+
+    def test_an_unbounded_client_still_waits_the_cool_off_out(self, respx_mock: respx.MockRouter) -> None:
+        # `math.inf` is the opt-out, and a batch job that passes it gets the old behaviour back.
+        respx_mock.get(f"{BASE_URL}/generation-request/{REQUEST_ID}").mock(
+            side_effect=[
+                httpx.Response(429, json=error_body("request_rate_limited"), headers={"retry-after": "600"}),
+                httpx.Response(200, json=status(finalized=True, banners=[BANNER])),
+            ]
+        )
+        with Abyssale(api_key="k", base_url=BASE_URL, max_retry_wait=math.inf) as client:
+            assert client.wait_for_generation_request(REQUEST_ID).is_finalized
 
     def test_a_network_blip_is_transient(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
         respx_mock.get(f"{BASE_URL}/generation-request/{REQUEST_ID}").mock(

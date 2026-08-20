@@ -10,7 +10,7 @@ pip install abyssale
 ```
 
 Requires Python 3.10+. This release models API version **`v2026-08-20`** — see
-[CHANGELOG.md](CHANGELOG.md) for the SDK-to-API version pairing, and `abyssale.__api_version__` to
+[CHANGELOG.md](https://github.com/getabyssale/abyssale-python-sdk/blob/main/CHANGELOG.md) for the SDK-to-API version pairing, and `abyssale.__api_version__` to
 read it at runtime.
 
 ## Quick start
@@ -72,6 +72,12 @@ without one gets a single one-second probe, because the status is shared by "out
 (permanent) and the gateway's per-second ceiling (clears immediately). Writes are never retried on a
 5xx — a timed-out generation may still have been billed.
 
+A `Retry-After` is only waited out up to `max_retry_wait` (30s by default). The rate limiter can name
+a cool-off of half an hour once a quota is spent, and sleeping through that — times `max_retries` —
+turns one call into an hour of silence. Past the bound the call fails immediately instead, with
+`err.retry_after` carrying the server's figure so you can decide what to do with it. Pass
+`max_retry_wait=math.inf` if you do want to wait however long the server asks.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -79,12 +85,13 @@ without one gets a single one-second probe, because the status is shared by "out
 | `ABYSSALE_API_KEY` | — | Required, unless you pass `api_key=`. |
 | `ABYSSALE_TIMEOUT_MS` | `30000` | Per-attempt request timeout. |
 | `ABYSSALE_MAX_RETRIES` | `3` | `0` disables retries. |
+| `ABYSSALE_MAX_RETRY_WAIT_MS` | `30000` | Longest `Retry-After` to wait out. `inf` to never give up. |
 
 Every one can be overridden per client: `Abyssale(api_key=..., timeout=60, max_retries=0)`.
 
 ## Examples
 
-Runnable scripts are in [`examples/`](examples). Each one names its own command:
+Runnable scripts are in [`examples/`](https://github.com/getabyssale/abyssale-python-sdk/blob/main/examples). Each one names its own command:
 
 ```bash
 ABYSSALE_API_KEY=your-key python examples/generate_image.py
@@ -92,7 +99,7 @@ ABYSSALE_API_KEY=your-key python examples/generate_image.py
 
 ## Contributing
 
-See [AGENTS.md](AGENTS.md) for the architecture, how to regenerate the models from the OpenAPI spec,
+See [AGENTS.md](https://github.com/getabyssale/abyssale-python-sdk/blob/main/AGENTS.md) for the architecture, how to regenerate the models from the OpenAPI spec,
 and how to add an endpoint.
 
 ## Links
@@ -100,3 +107,4 @@ and how to add an endpoint.
 - [Documentation](https://developers.abyssale.com/sdks/python)
 - [API reference](https://api-reference.abyssale.com)
 - [OpenAPI spec](https://api-reference.abyssale.com/api.yaml) — the contract this SDK is generated from
+- [Source](https://github.com/getabyssale/abyssale-python-sdk)

@@ -20,7 +20,13 @@ from typing import Any
 
 import httpx
 
-from ._config import resolve_api_key, resolve_base_url, resolve_max_retries, resolve_timeout
+from ._config import (
+    resolve_api_key,
+    resolve_base_url,
+    resolve_max_retries,
+    resolve_max_retry_wait,
+    resolve_timeout,
+)
 from ._errors import AbyssaleConnectionError, AbyssaleError
 from ._polling import PollLoop, check_generation_result, resolve_poll_options
 from ._retry import retry_schedule
@@ -73,12 +79,14 @@ class AsyncAbyssale:
         base_url: str | None = None,
         timeout: float | None = None,
         max_retries: int | None = None,
+        max_retry_wait: float | None = None,
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
         self._api_key = resolve_api_key(api_key)
         self.base_url = resolve_base_url(base_url)
         self.timeout = resolve_timeout(timeout)
         self.max_retries = resolve_max_retries(max_retries)
+        self.max_retry_wait = resolve_max_retry_wait(max_retry_wait)
         self._headers = default_headers(self._api_key, __version__)
         self._owns_client = http_client is None
         self._http = http_client or httpx.AsyncClient()
@@ -127,7 +135,7 @@ class AsyncAbyssale:
         query = clean_query(query)
         response = await self._send(method, path, query, json)
 
-        schedule = retry_schedule(response, method, self.max_retries)
+        schedule = retry_schedule(response, method, self.max_retries, self.max_retry_wait)
         delay = next(schedule, None)
         while delay is not None:
             await asyncio.sleep(delay)
@@ -268,7 +276,7 @@ class AsyncAbyssale:
         timeout: float | None = None,
     ) -> GenerationRequestStatus:
         """Wait for an async generation to complete. Partial success resolves; see the sync client."""
-        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout))
+        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout), self.max_retry_wait)
         while True:
             try:
                 data = await self.get_generation_request(generation_request_id)
@@ -289,7 +297,7 @@ class AsyncAbyssale:
         timeout: float | None = None,
     ) -> DuplicationRequestStatus:
         """Wait for a template duplication to reach ``COMPLETED`` or ``ERROR``."""
-        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout))
+        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout), self.max_retry_wait)
         while True:
             try:
                 data = await self.get_duplication_request(duplicate_request_id)

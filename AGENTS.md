@@ -51,7 +51,10 @@ short version: a 5xx is only retried on GET/HEAD/OPTIONS because every POST bill
 with `Retry-After` gets the full ladder; a bare 429 gets exactly one one-second probe, because the
 spec gives `rate_limit_exceeded` two meanings — "out of credits" (permanent) and the gateway's
 10 req/s ceiling (clears instantly) — and nothing in the response distinguishes them;
-`feature_not_in_plan` is never retried.
+`feature_not_in_plan` is never retried, whatever headers came with it, since no window makes a plan
+restriction clear. No server-named wait is honoured past `max_retry_wait` (30 s), in the request loop
+or inside a `wait_for_*` poll: a spent quota can ask for half an hour, and how long to block is the
+caller's call, not the SDK's.
 
 **Request bodies are plain dicts. Responses are models.** The spec's `elements` schema is an `anyOf`
 of ten deliberately overlapping branches with *no* discriminator — an element payload carries no

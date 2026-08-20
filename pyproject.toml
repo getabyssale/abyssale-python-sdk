@@ -31,6 +31,9 @@ dependencies = [
 Homepage = "https://developers.abyssale.com"
 Documentation = "https://developers.abyssale.com/sdks/python"
 "API Reference" = "https://api-reference.abyssale.com"
+Repository = "https://github.com/getabyssale/abyssale-python-sdk"
+Issues = "https://github.com/getabyssale/abyssale-python-sdk/issues"
+Changelog = "https://github.com/getabyssale/abyssale-python-sdk/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

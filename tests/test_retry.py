@@ -8,6 +8,7 @@ specific cost, spelled out in `abyssale._retry`.
 from __future__ import annotations
 
 import email.utils
+import math
 import time
 
 import httpx
@@ -53,10 +54,64 @@ class TestPlanRetry:
         # a second's delay bought for nothing.
         assert plan_retry(response(429, {"id": "feature_not_in_plan"}), "feature_not_in_plan") is None
 
-    def test_a_permanent_code_with_retry_after_is_still_believed(self) -> None:
-        # It named a window, so it is a real throttle whatever the id says.
-        plan = plan_retry(response(429, {"id": "feature_not_in_plan"}, {"retry-after": "5"}), "feature_not_in_plan")
-        assert plan == (False, 5.0)
+    def test_a_permanent_code_outranks_retry_after(self) -> None:
+        # A named window is a claim that waiting helps, and for a plan restriction it cannot be —
+        # the feature will not appear in five seconds. A header on this refusal is far more likely
+        # to be generic rate-limit middleware stamping every 429 that passes through it than a
+        # statement about this one, so the id wins.
+        assert (
+            plan_retry(response(429, {"id": "feature_not_in_plan"}, {"retry-after": "5"}), "feature_not_in_plan")
+            is None
+        )
+
+
+class TestMaxRetryWait:
+    """A server-named window is only honoured up to what the caller agreed to sit out.
+
+    Without a bound, a spent quota answering `Retry-After: 1659` blocks one call for 28 minutes —
+    times `max_retries`. The point of stopping is not that the wait is wrong, it is that only the
+    caller can decide whether it is acceptable, and they cannot decide while asleep.
+    """
+
+    def test_a_wait_within_the_budget_is_honoured(self) -> None:
+        plan = plan_retry(response(429, headers={"retry-after": "12"}), max_retry_wait=30.0)
+        assert plan == (False, 12.0)
+
+    def test_a_wait_at_exactly_the_budget_is_honoured(self) -> None:
+        plan = plan_retry(response(429, headers={"retry-after": "30"}), max_retry_wait=30.0)
+        assert plan == (False, 30.0)
+
+    def test_a_wait_beyond_the_budget_is_not_retried(self) -> None:
+        # The quota-spent cool-off this API really sends. The caller gets the 429 now, with
+        # `retry_after` on it, instead of 28 minutes of silence.
+        assert plan_retry(response(429, headers={"retry-after": "1659"}), max_retry_wait=30.0) is None
+
+    def test_it_bounds_5xx_waits_too(self) -> None:
+        # The bound is "how long may this SDK block without returning", which is not a property of
+        # any one status.
+        assert plan_retry(response(503, headers={"retry-after": "600"}), max_retry_wait=30.0) is None
+
+    def test_it_does_not_touch_the_backoff_schedule(self) -> None:
+        # No `Retry-After` means no server-named window to bound; the exponential ladder is the
+        # SDK's own and is already short.
+        plan = plan_retry(response(503), max_retry_wait=0.001)
+        assert plan == (False, None)
+
+    def test_the_ceiling_probe_is_unaffected(self) -> None:
+        plan = plan_retry(response(429, {"id": "rate_limit_exceeded"}), "rate_limit_exceeded", max_retry_wait=30.0)
+        assert plan is not None and plan.probe is True
+
+    def test_infinity_restores_waiting_however_long_the_server_asks(self) -> None:
+        plan = plan_retry(response(429, headers={"retry-after": "1659"}), max_retry_wait=math.inf)
+        assert plan == (False, 1659.0)
+
+    def test_the_default_is_uncapped_so_the_caller_opts_in(self) -> None:
+        # `plan_retry` is the classifier, not the policy: the clients supply the budget.
+        assert plan_retry(response(429, headers={"retry-after": "1659"})) == (False, 1659.0)
+
+    def test_the_schedule_yields_nothing_past_the_budget(self) -> None:
+        schedule = retry_schedule(response(429, headers={"retry-after": "1659"}), "GET", 3, 30.0)
+        assert next(schedule, None) is None
 
 
 class TestRetryAfter:

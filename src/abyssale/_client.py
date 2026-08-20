@@ -22,7 +22,13 @@ from typing import Any
 
 import httpx
 
-from ._config import resolve_api_key, resolve_base_url, resolve_max_retries, resolve_timeout
+from ._config import (
+    resolve_api_key,
+    resolve_base_url,
+    resolve_max_retries,
+    resolve_max_retry_wait,
+    resolve_timeout,
+)
 from ._errors import AbyssaleConnectionError, AbyssaleError
 from ._polling import PollLoop, check_generation_result, resolve_poll_options
 from ._retry import retry_schedule
@@ -65,6 +71,11 @@ class Abyssale:
         attempt that follows it.
     max_retries:
         Defaults to ``$ABYSSALE_MAX_RETRIES`` or 3. Set to 0 to disable retries entirely.
+    max_retry_wait:
+        Longest single ``Retry-After`` the SDK will wait out for you, in seconds. Defaults to
+        ``$ABYSSALE_MAX_RETRY_WAIT_MS`` (milliseconds) or 30s. A longer cool-off is not slept
+        through: the call fails immediately instead, with ``retry_after`` carrying the server's
+        figure so you can decide. Pass ``math.inf`` to wait however long the server asks.
     http_client:
         Bring your own ``httpx.Client`` — for a proxy, a custom transport, or connection reuse
         across SDKs. Auth headers are set on the request, not on the client, so yours is untouched.
@@ -90,12 +101,14 @@ class Abyssale:
         base_url: str | None = None,
         timeout: float | None = None,
         max_retries: int | None = None,
+        max_retry_wait: float | None = None,
         http_client: httpx.Client | None = None,
     ) -> None:
         self._api_key = resolve_api_key(api_key)
         self.base_url = resolve_base_url(base_url)
         self.timeout = resolve_timeout(timeout)
         self.max_retries = resolve_max_retries(max_retries)
+        self.max_retry_wait = resolve_max_retry_wait(max_retry_wait)
         self._headers = default_headers(self._api_key, __version__)
         self._owns_client = http_client is None
         self._http = http_client or httpx.Client()
@@ -145,7 +158,7 @@ class Abyssale:
         query = clean_query(query)
         response = self._send(method, path, query, json)
 
-        schedule = retry_schedule(response, method, self.max_retries)
+        schedule = retry_schedule(response, method, self.max_retries, self.max_retry_wait)
         delay = next(schedule, None)
         while delay is not None:
             time.sleep(delay)
@@ -438,7 +451,7 @@ class Abyssale:
             for banner in result.banners or []:
                 print(banner.file.cdn_url)
         """
-        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout))
+        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout), self.max_retry_wait)
         while True:
             try:
                 data = self.get_generation_request(generation_request_id)
@@ -462,7 +475,7 @@ class Abyssale:
 
         Note that ``ERROR`` is a *result*, not an exception — check ``result.status``.
         """
-        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout))
+        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout), self.max_retry_wait)
         while True:
             try:
                 data = self.get_duplication_request(duplicate_request_id)

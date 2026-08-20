@@ -4,7 +4,7 @@ import pytest
 
 from abyssale import Abyssale, AsyncAbyssale
 
-BASE_URL = "https://api.test.abyssale.com"
+BASE_URL = "https://api.abyssale.invalid"
 API_KEY = "test-key"
 
 

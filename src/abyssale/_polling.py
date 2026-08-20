@@ -11,6 +11,7 @@ differs between them.
 
 from __future__ import annotations
 
+import math
 import random
 import time
 from dataclasses import dataclass
@@ -86,8 +87,13 @@ class PollLoop:
             sleep(loop.next_wait())       # raises when the next wait would cross the deadline
     """
 
-    def __init__(self, options: PollOptions) -> None:
+    def __init__(self, options: PollOptions, max_retry_wait: float = math.inf) -> None:
         self._options = options
+        #: The client's ``max_retry_wait``, applied to a poll's ``Retry-After`` for the same reason
+        #: the request loop applies it: the deadline bounds the *wait*, not any single silence
+        #: inside it, so without this a `Retry-After: 1659` inside a 30-minute poll is slept
+        #: through in one go — the one thing the setting exists to prevent.
+        self._max_retry_wait = max_retry_wait
         self._deadline = time.monotonic() + options.timeout
         self._interval = options.interval
         self._transient_failures = 0
@@ -113,10 +119,12 @@ class PollLoop:
         A 5xx or a real throttle says nothing about the generation itself, while any other 4xx is a
         verdict — ``generation_request_not_found`` must fail on the first poll rather than be
         re-asked for 30 minutes. The classification is :func:`plan_retry`, the same one the request
-        loop uses, so the two cannot drift into disagreeing about which 429 is worth re-asking.
+        loop uses, so the two cannot drift into disagreeing about which 429 is worth re-asking —
+        including its ``max_retry_wait`` bound, so a cool-off the caller refused to sit out in a
+        single request is not sat out inside a poll either.
         """
         if isinstance(err, AbyssaleAPIError):
-            plan = plan_retry(err.response, err.id)
+            plan = plan_retry(err.response, err.id, max_retry_wait=self._max_retry_wait)
             if plan is None:
                 raise self._fatal(err)
             if plan.probe:

@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import math
+
 import httpx
 import pytest
 import respx
 
 from abyssale import Abyssale, AsyncAbyssale
-from abyssale._config import DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_SECONDS
+from abyssale._config import (
+    DEFAULT_BASE_URL,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_MAX_RETRY_WAIT_SECONDS,
+    DEFAULT_TIMEOUT_SECONDS,
+)
 from abyssale._errors import AbyssaleConfigError
 
 from .conftest import API_KEY, BASE_URL, error_body
@@ -42,18 +49,33 @@ class TestConfig:
         monkeypatch.delenv("ABYSSALE_BASE_URL", raising=False)
         monkeypatch.delenv("ABYSSALE_TIMEOUT_MS", raising=False)
         monkeypatch.delenv("ABYSSALE_MAX_RETRIES", raising=False)
+        monkeypatch.delenv("ABYSSALE_MAX_RETRY_WAIT_MS", raising=False)
         client = Abyssale(api_key=API_KEY)
         assert client.base_url == DEFAULT_BASE_URL
         assert client.timeout == DEFAULT_TIMEOUT_SECONDS
         assert client.max_retries == DEFAULT_MAX_RETRIES
+        assert client.max_retry_wait == DEFAULT_MAX_RETRY_WAIT_SECONDS
 
     def test_the_timeout_env_var_is_milliseconds(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("ABYSSALE_TIMEOUT_MS", "5000")
         assert Abyssale(api_key=API_KEY).timeout == 5.0
 
+    def test_the_max_retry_wait_env_var_is_milliseconds(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ABYSSALE_MAX_RETRY_WAIT_MS", "5000")
+        assert Abyssale(api_key=API_KEY).max_retry_wait == 5.0
+
+    def test_the_wait_cap_can_be_disabled(self) -> None:
+        assert Abyssale(api_key=API_KEY, max_retry_wait=math.inf).max_retry_wait == math.inf
+
     @pytest.mark.parametrize(
         ("var", "value"),
-        [("ABYSSALE_TIMEOUT_MS", "-1"), ("ABYSSALE_TIMEOUT_MS", "abc"), ("ABYSSALE_MAX_RETRIES", "-2")],
+        [
+            ("ABYSSALE_TIMEOUT_MS", "-1"),
+            ("ABYSSALE_TIMEOUT_MS", "abc"),
+            ("ABYSSALE_MAX_RETRIES", "-2"),
+            ("ABYSSALE_MAX_RETRY_WAIT_MS", "-1"),
+            ("ABYSSALE_MAX_RETRY_WAIT_MS", "abc"),
+        ],
     )
     def test_invalid_settings_are_rejected(self, monkeypatch: pytest.MonkeyPatch, var: str, value: str) -> None:
         monkeypatch.setenv(var, value)
@@ -173,6 +195,39 @@ class TestRetryIntegration:
         )
         client.create_project({"name": "x"})
         assert route.call_count == 2
+
+    def test_a_cool_off_longer_than_the_budget_fails_immediately(self, respx_mock: respx.MockRouter) -> None:
+        """The quota-spent case: the server asks for 28 minutes, the caller agreed to 30 seconds.
+
+        Answering now with `retry_after` intact hands the decision back rather than making it for
+        them — the whole call would otherwise block for up to `max_retries` times that window.
+        """
+        from abyssale import AbyssaleRateLimitError
+
+        route = respx_mock.get(f"{BASE_URL}/fonts").mock(
+            return_value=httpx.Response(429, json=error_body("rate_limit_exceeded"), headers={"retry-after": "1659"})
+        )
+        with Abyssale(api_key=API_KEY, base_url=BASE_URL, max_retry_wait=30.0) as client:
+            with pytest.raises(AbyssaleRateLimitError) as caught:
+                client.list_fonts()
+        assert route.call_count == 1
+        assert caught.value.retry_after == 1659.0  # the server's figure survives, to act on
+
+    def test_a_cool_off_inside_the_budget_is_still_waited_out(
+        self, respx_mock: respx.MockRouter, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        slept: list[float] = []
+        monkeypatch.setattr("abyssale._client.time.sleep", slept.append)
+        route = respx_mock.get(f"{BASE_URL}/fonts").mock(
+            side_effect=[
+                httpx.Response(429, json=error_body("request_rate_limited"), headers={"retry-after": "4"}),
+                httpx.Response(200, json=[]),
+            ]
+        )
+        with Abyssale(api_key=API_KEY, base_url=BASE_URL, max_retry_wait=30.0) as client:
+            assert client.list_fonts() == []
+        assert route.call_count == 2
+        assert slept == [4.0]
 
     def test_max_retries_zero_disables_the_probe(self, respx_mock: respx.MockRouter) -> None:
         from abyssale import AbyssaleRateLimitError
