@@ -1286,7 +1286,7 @@ class FocusZoom(Enum):
     Specific to `people` model. Controls the zoom level applied. Default is `max`.
     """
 
-    False_ = False
+    off = 'off'
     low = 'low'
     medium = 'medium'
     max = 'max'
