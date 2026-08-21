@@ -13,7 +13,7 @@ images, colors, and other properties dynamically.
 `abyssale` is the official Python SDK for the Abyssale REST API, built directly on its OpenAPI
 spec: one method per operation, named after that operation's `operationId` snake_cased, and Pydantic
 response models generated from the spec's schemas. It provides a sync client (`Abyssale`) and an
-async client (`AsyncAbyssale`) with identical surfaces — 18 methods covering every operation in the
+async client (`AsyncAbyssale`) with identical surfaces — 21 methods covering every operation in the
 spec, plus two polling helpers with exponential backoff. Built on `httpx`. Configuration is read from the `ABYSSALE_API_KEY`
 environment variable or passed to the constructor.
 
@@ -26,7 +26,7 @@ pip install abyssale
 Requires Python 3.10+. Set the environment variable `ABYSSALE_API_KEY` to your Abyssale API key, or
 pass `api_key=` to the client.
 
-This release models API version `v2026-08-20`, readable at runtime as `abyssale.__api_version__`.
+This release models API version `v2026-08-21`, readable at runtime as `abyssale.__api_version__`.
 The API is versioned by release date and keeps one version at a time; the SDK version is
 independent.
 
@@ -55,6 +55,14 @@ the async ones are coroutines.
 - `list_workspace_template_categories()` — List the categories that group workspace templates
 - `duplicate_workspace_template(company_template_id, body)` — Copy a shared workspace template into a project
 - `get_duplication_request(duplicate_request_id)` — Poll the status of a template duplication request
+- `get_signing_secret()` — Get the workspace's webhook signing secret, minting it on the first call; deliveries are unsigned until it is called once
+- `rotate_signing_secret(force=False)` — Rotate the signing secret, keeping the previous one valid 24 h; a second rotate inside that window raises `AbyssaleAPIError` with `id="previous_secret_still_active"` unless `force=True`
+- `revoke_signing_secret()` — Invalidate the previous secret, ending the rotation overlap; the compromise path, not routine hygiene. Takes effect within 60 seconds, not instantly — the signing side caches secrets for a minute
+
+Verification helpers, in the public `abyssale.webhooks` module (stdlib only — it imports no client, so a receiver process needs no API key):
+
+- `verify_webhook_signature(body, header, secret, *, tolerance_seconds=300, now=None)` — Verify an inbound delivery's `X-Abyssale-Signature`. HMAC-SHA256 over `"v1:webhook:" + t + "." + raw_body`. Pass the RAW body (`request.get_data()` in Flask, `await request.body()` in FastAPI) — a re-serialised dict never matches. Returns False, never raises, on any malformed or forged header, and checks every `v1` because a rotation sends two. Deduplicate on `X-Abyssale-Delivery-Id`, 64 lowercase hex, stable across all six attempts (one delivery plus up to five retries)
+- `signature_timestamp(header)` — The signature's `t` in seconds, or None; the only signed time in a delivery
 
 ## Common use cases
 

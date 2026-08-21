@@ -49,6 +49,7 @@ from .models import (
     GenerationRequestStatus,
     Project,
     ProjectSummary,
+    SigningSecret,
     WorkspaceTemplate,
     WorkspaceTemplateCategory,
 )
@@ -182,6 +183,49 @@ class Abyssale:
         ``200`` for a revoked key.
         """
         return validate(AuthResult, self._request("POST", "/auth"))
+
+    # ── Webhook signing secret ────────────────────────────────────────────────
+
+    def get_signing_secret(self) -> SigningSecret:
+        """Get the workspace's webhook signing secret, creating it on the first call.
+
+        One secret covers every delivery in the workspace, whether the receiver was subscribed in
+        the dashboard or requested per job with a ``callback_url``. Until this is called at least
+        once, deliveries are **unsigned** — fetching the secret is what turns signing on.
+
+        This is not the API key and cannot be swapped for one: the API key authorises calls to
+        Abyssale and can spend credits, this secret only proves a delivery came from Abyssale.
+        Verify with :func:`abyssale.webhooks.verify_webhook_signature`.
+        """
+        return validate(SigningSecret, self._request("GET", "/signing-secret"))
+
+    def rotate_signing_secret(self, *, force: bool = False) -> SigningSecret:
+        """Rotate the signing secret, keeping the previous one valid for 24 hours.
+
+        During that window every delivery carries two ``v1`` hashes, so a receiver holding either
+        value still verifies and you can deploy the new one on your own schedule.
+
+        Rotating **again** inside that window raises :class:`AbyssaleAPIError` with
+        ``id="previous_secret_still_active"`` and changes nothing, because the second rotate would
+        drop the secret your receiver is still using. Wait for the window to close, call
+        :meth:`revoke_signing_secret` first, or pass ``force=True`` and accept that the oldest
+        secret stops verifying within a minute.
+        """
+        # Omitted rather than sent as `force=false` — `clean_query` drops `None`, and an explicit
+        # `force=false` in a server log reads as an override the caller never asked for.
+        query = {"force": True} if force else None
+        return validate(SigningSecret, self._request("POST", "/signing-secret/rotate", query=query))
+
+    def revoke_signing_secret(self) -> SigningSecret:
+        """Invalidate the previous secret, ending the rotation overlap early.
+
+        The compromise path, not routine hygiene: anything still signed with the old secret stops
+        verifying **within 60 seconds** — not instantly, because the signing side caches secrets
+        for up to a minute. The current secret is left untouched, and this call is never refused.
+        You are the verifier, so dropping the old secret from your own config is what closes a
+        leak; do not wait on this call.
+        """
+        return validate(SigningSecret, self._request("POST", "/signing-secret/revoke"))
 
     # ── Designs ───────────────────────────────────────────────────────────────
 

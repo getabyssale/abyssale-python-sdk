@@ -12,7 +12,36 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.0.0 | `v2026-08-20` | [spec](https://api-reference.abyssale.com/api.yaml) |
+| 1.1.0 | `v2026-08-21` | [spec](https://api-reference.abyssale.com/api.yaml) |
+| 1.0.0 | `v2026-08-20` | |
+
+## [1.1.0] — 2026-08-21
+
+_Generated from API version **`v2026-08-21`**._
+
+Minor, not patch: three new client methods and a new public module. Nothing existing changed shape,
+so there is no upgrade step beyond installing it.
+
+### Added
+
+- **`abyssale.webhooks`** — a new **public** module (the third, after `abyssale` and
+  `abyssale.models`) with `verify_webhook_signature` and `signature_timestamp`. It imports **only
+  the standard library**: no client, no `httpx`. That is the point of it being separate — a process
+  that only receives deliveries should not have to hold a credential that can spend credits, and a
+  test asserts the import graph so the property cannot rot.
+
+  Pass the **raw** body: the signature covers the bytes as sent, so a parsed-and-re-serialised dict
+  reorders keys and never matches. It returns `False` and never raises on a missing, malformed,
+  forged or stale header — anyone who finds a webhook URL can POST to it, and an exception in a
+  handler is a 500 plus, on most frameworks, a retried delivery. It checks **every** `v1` in the
+  header, because a rotation puts two there for 24 hours.
+- **`get_signing_secret()`, `rotate_signing_secret(force=False)`, `revoke_signing_secret()`** on
+  both clients — the three `/signing-secret` endpoints. Deliveries are unsigned until
+  `get_signing_secret()` is called once; fetching the secret is what turns signing on. A refused
+  second rotate raises `AbyssaleAPIError` with `id="previous_secret_still_active"` and is **not
+  retried** — it is a state conflict, not a transient failure. `force` is omitted from the query
+  string entirely when false, so an ordinary rotate stays a bare `POST`.
+- `SigningSecret` response model, generated from the spec.
 
 ## [1.0.0] — 2026-08-20
 
