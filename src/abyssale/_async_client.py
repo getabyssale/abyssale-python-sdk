@@ -174,7 +174,11 @@ class AsyncAbyssale:
         return validate(SigningSecret, await self._request("POST", "/signing-secret/rotate", query=query))
 
     async def revoke_signing_secret(self) -> SigningSecret:
-        """Invalidate the previous secret immediately, ending the rotation overlap early."""
+        """Invalidate the previous secret, ending the rotation overlap early.
+
+        Takes effect within 60 seconds, not instantly — see
+        :meth:`Abyssale.revoke_signing_secret`.
+        """
         return validate(SigningSecret, await self._request("POST", "/signing-secret/revoke"))
 
     # ── Designs ───────────────────────────────────────────────────────────────

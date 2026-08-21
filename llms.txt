@@ -26,7 +26,7 @@ pip install abyssale
 Requires Python 3.10+. Set the environment variable `ABYSSALE_API_KEY` to your Abyssale API key, or
 pass `api_key=` to the client.
 
-This release models API version `v2026-08-20`, readable at runtime as `abyssale.__api_version__`.
+This release models API version `v2026-08-21`, readable at runtime as `abyssale.__api_version__`.
 The API is versioned by release date and keeps one version at a time; the SDK version is
 independent.
 
@@ -57,7 +57,7 @@ the async ones are coroutines.
 - `get_duplication_request(duplicate_request_id)` — Poll the status of a template duplication request
 - `get_signing_secret()` — Get the workspace's webhook signing secret, minting it on the first call; deliveries are unsigned until it is called once
 - `rotate_signing_secret(force=False)` — Rotate the signing secret, keeping the previous one valid 24 h; a second rotate inside that window raises `AbyssaleAPIError` with `id="previous_secret_still_active"` unless `force=True`
-- `revoke_signing_secret()` — Invalidate the previous secret immediately, ending the rotation overlap; the compromise path, not routine hygiene
+- `revoke_signing_secret()` — Invalidate the previous secret, ending the rotation overlap; the compromise path, not routine hygiene. Takes effect within 60 seconds, not instantly — the signing side caches secrets for a minute
 
 Verification helpers, in the public `abyssale.webhooks` module (stdlib only — it imports no client, so a receiver process needs no API key):
 

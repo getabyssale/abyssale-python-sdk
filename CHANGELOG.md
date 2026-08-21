@@ -12,14 +12,15 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.0.0 | `v2026-08-20` | [spec](https://api-reference.abyssale.com/api.yaml) |
+| 1.1.0 | `v2026-08-21` | [spec](https://api-reference.abyssale.com/api.yaml) |
+| 1.0.0 | `v2026-08-20` | |
 
-## [Unreleased]
+## [1.1.0] — 2026-08-21
 
-_Not published. The API surface this tracks is itself unreleased, so the version in
-`pyproject.toml` / `_version.py` is bumped when the release goes out, not when the change lands. The
-table above is unchanged for the same reason: these endpoints are not in `v2026-08-20`, and
-`__api_version__` will be updated by the release that publishes them._
+_Generated from API version **`v2026-08-21`**._
+
+Minor, not patch: three new client methods and a new public module. Nothing existing changed shape,
+so there is no upgrade step beyond installing it.
 
 ### Added
 

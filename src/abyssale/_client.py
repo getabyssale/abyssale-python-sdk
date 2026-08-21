@@ -209,7 +209,7 @@ class Abyssale:
         ``id="previous_secret_still_active"`` and changes nothing, because the second rotate would
         drop the secret your receiver is still using. Wait for the window to close, call
         :meth:`revoke_signing_secret` first, or pass ``force=True`` and accept that the oldest
-        secret stops verifying immediately.
+        secret stops verifying within a minute.
         """
         # Omitted rather than sent as `force=false` — `clean_query` drops `None`, and an explicit
         # `force=false` in a server log reads as an override the caller never asked for.
@@ -217,10 +217,13 @@ class Abyssale:
         return validate(SigningSecret, self._request("POST", "/signing-secret/rotate", query=query))
 
     def revoke_signing_secret(self) -> SigningSecret:
-        """Invalidate the previous secret immediately, ending the rotation overlap early.
+        """Invalidate the previous secret, ending the rotation overlap early.
 
         The compromise path, not routine hygiene: anything still signed with the old secret stops
-        verifying at once. The current secret is left untouched, and this call is never refused.
+        verifying **within 60 seconds** — not instantly, because the signing side caches secrets
+        for up to a minute. The current secret is left untouched, and this call is never refused.
+        You are the verifier, so dropping the old secret from your own config is what closes a
+        leak; do not wait on this call.
         """
         return validate(SigningSecret, self._request("POST", "/signing-secret/revoke"))
 
