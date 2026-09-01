@@ -21,6 +21,8 @@ from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 from ._generated import (
     Banner,
+    CreditBlock,
+    CreditsBalance,
     Design,
     DesignAnimation,
     DesignElement,
@@ -147,6 +149,8 @@ __all__ = [
     "DesignPageElement",
     "DesignSummary",
     "DesignVariables",
+    "CreditBlock",
+    "CreditsBalance",
     "DuplicatedDesign",
     "DuplicationRequest",
     "DuplicationRequestStatus",

@@ -157,6 +157,35 @@ class TestResponses:
         assert design.elements_per_page == {"page_1": []}
 
 
+class TestCredits:
+    _BALANCE = {
+        "generation_credits": {"available": 120, "limit": 500, "consumed": 380, "extra": 0},
+        "ai_credits": {"available": 42, "limit": 100, "consumed": 58, "extra": 0},
+    }
+
+    def test_the_balance_becomes_two_credit_blocks(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        route = respx_mock.get(f"{BASE_URL}/credits").mock(return_value=httpx.Response(200, json=self._BALANCE))
+        balance = client.get_credits()
+        assert not route.calls.last.request.url.params
+        assert balance.generation_credits.available == 120
+        assert balance.ai_credits.consumed == 58
+
+    def test_an_unlimited_plan_reads_back_as_none(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        # `available`/`limit` are nullable in the spec, and the generated models type them as plain
+        # ints — same as every other nullable field here (`Design.project_id`). The tolerant parse
+        # is what keeps the null readable rather than raising, so pin that it does.
+        unlimited = {
+            **self._BALANCE,
+            "generation_credits": {"available": None, "limit": None, "consumed": 4200, "extra": 0},
+        }
+        respx_mock.get(f"{BASE_URL}/credits").mock(return_value=httpx.Response(200, json=unlimited))
+        balance = client.get_credits()
+        assert balance.generation_credits.available is None
+        assert balance.generation_credits.limit is None
+        assert balance.generation_credits.consumed == 4200
+        assert balance.ai_credits.available == 42
+
+
 class TestRetryIntegration:
     def test_a_read_5xx_is_retried_until_it_succeeds(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
         route = respx_mock.get(f"{BASE_URL}/fonts").mock(

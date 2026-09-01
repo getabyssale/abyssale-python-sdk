@@ -12,8 +12,29 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.1.0 | `v2026-08-21` | [spec](https://api-reference.abyssale.com/api.yaml) |
+| 1.2.0 | `v2026-09-02` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.2.0] — 2026-09-02
+
+_Generated from API version **`v2026-09-02`**._
+
+Minor, not patch: one new client method. Nothing existing changed shape, so there is no upgrade step
+beyond installing it.
+
+### Added
+
+- **`get_credits()`** on both clients — the new `GET /credits`, returning the workspace's remaining
+  credits for the current billing period as `generation_credits` and `ai_credits`, each a
+  `CreditBlock` of `available`, `limit`, `consumed` and `extra`. The read costs no credits.
+
+  Two things to know before branching on the numbers. **`available` and `limit` are `null` on an
+  unlimited plan** — and since the generated models type nullable fields as plain `int` (as they do
+  for `Design.project_id`), the tolerant parse is what keeps the `None` readable; test for `None`
+  before comparing, because `available > 0` raises on an unlimited workspace. And `available` counts
+  the **recurring** allowance only, so what a request can still spend is `available + extra`.
+- `CreditsBalance` and `CreditBlock` are exported from `abyssale.models`.
 
 ## [1.1.0] — 2026-08-21
 

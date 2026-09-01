@@ -1,6 +1,6 @@
 # Contributing to the Abyssale Python SDK
 
-**The [OpenAPI spec](https://api-reference.abyssale.com/api.yaml) is the source of truth for this
+**The [OpenAPI spec](https://developers.abyssale.com/api.yaml) is the source of truth for this
 SDK.** Everything traces back to it: there is one method per operation, named after that operation's
 `operationId` snake_cased (`listDesigns` → `list_designs`); response models are generated from the
 spec's schemas; and the retry rules follow the error contract the spec documents. If the SDK and the
@@ -9,6 +9,18 @@ in which case fix the spec (see "Parsing never fails a 200" below).
 
 `tests/test_async_parity.py` pins the method set against the spec's `operationId` list, so an
 operation cannot be added to the API and quietly missed here.
+
+## Where the docs live
+
+The **canonical SDK reference is the docs site**: `https://developers.abyssale.com/sdks/python`
+(source: `abyssale-developers-doc/docs/sdks/python.md`). `README.md` is the PyPI landing page and is
+deliberately a short pointer — do not re-expand the method list, the configuration table, the error
+hierarchy or the retry rules into it, or the two copies will drift.
+
+The rule was learned the hard way: webhook verification arrived in the README as a 50-line section
+restating rules that already lived on `/webhooks/signature-verification`, alongside copies of the
+Errors, Retries and Configuration sections. Webhooks, like everything else, get **one line and a
+link**. Add new facts to the docs page, and keep `llms.txt` in sync since it is machine-facing.
 
 ## Setup
 
@@ -22,7 +34,7 @@ pytest
 
 | File | Role |
 |---|---|
-| `src/abyssale/_client.py` | `Abyssale` — the sync client. The 18 endpoint methods and the 2 `wait_for_*` helpers, each a one-liner over `_request`. This is the file to read first. |
+| `src/abyssale/_client.py` | `Abyssale` — the sync client. The 22 endpoint methods and the 2 `wait_for_*` helpers, each a one-liner over `_request`. This is the file to read first. |
 | `src/abyssale/_async_client.py` | `AsyncAbyssale` — a hand-written mirror of the above. |
 | `src/abyssale/_retry.py` | Retry classification, derived from the error contract in the spec. Transport-free. |
 | `src/abyssale/_polling.py` | `PollLoop` — the poll schedule, the transient-failure budget and the deadline. Transport-free. |
@@ -82,7 +94,7 @@ ABYSSALE_SPEC_URL=file:///path/to/abyssale-edge-api/spec/api.yaml python scripts
 ```
 
 `src/abyssale/_generated.py` is committed. The default source is the published bundled spec at
-`https://api-reference.abyssale.com/api.yaml` — use that, not the repo's `spec/api.yaml`, whose
+`https://developers.abyssale.com/api.yaml` — use that, not the repo's `spec/api.yaml`, whose
 local `$ref`s are unresolved.
 
 Only the spec's **named component schemas** are generated. The handful of endpoints whose 2xx body

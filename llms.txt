@@ -26,7 +26,7 @@ pip install abyssale
 Requires Python 3.10+. Set the environment variable `ABYSSALE_API_KEY` to your Abyssale API key, or
 pass `api_key=` to the client.
 
-This release models API version `v2026-08-21`, readable at runtime as `abyssale.__api_version__`.
+This release models API version `v2026-09-02`, readable at runtime as `abyssale.__api_version__`.
 The API is versioned by release date and keeps one version at a time; the SDK version is
 independent.
 
@@ -47,6 +47,7 @@ the async ones are coroutines.
 - `wait_for_duplication_request(duplicate_request_id, ...)` — Poll template duplication until COMPLETED or ERROR
 - `get_file(banner_id)` — Retrieve metadata and CDN download URL for a generated file
 - `list_fonts()` — List all fonts available in the workspace (Google Fonts + custom uploads)
+- `get_credits()` — Remaining generation and AI credits for the workspace, for the current billing period; the read costs no credits. `available`/`limit` are `None` on an unlimited plan, and `available` counts the recurring allowance only — what a request can spend is `available + extra`
 - `list_projects()` — List all projects in the workspace
 - `create_project(body)` — Create a new project to organise designs
 - `export_banners(body)` — Asynchronously package a set of banners into a ZIP archive for download
@@ -88,4 +89,4 @@ Verification helpers, in the public `abyssale.webhooks` module (stdlib only — 
 - API documentation: https://developers.abyssale.com/rest-api
 - Developer hub: https://developers.abyssale.com
 - PyPI package: https://pypi.org/project/abyssale/
-- OpenAPI spec (the contract this SDK is generated from): https://api-reference.abyssale.com/api.yaml
+- OpenAPI spec (the contract this SDK is generated from): https://developers.abyssale.com/api.yaml
