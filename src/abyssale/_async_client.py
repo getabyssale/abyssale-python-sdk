@@ -35,6 +35,7 @@ from ._version import __version__
 from .models import (
     AuthResult,
     Banner,
+    CreditsBalance,
     DesignDetail,
     DesignFormatDetail,
     DesignListItem,
@@ -241,6 +242,29 @@ class AsyncAbyssale:
     async def list_fonts(self) -> list[Font]:
         """List all fonts available in the workspace."""
         return validate_list(Font, await self._request("GET", "/fonts"))
+
+    # ── Credits ───────────────────────────────────────────────────────────────
+
+    async def get_credits(self) -> CreditsBalance:
+        """Remaining generation and AI credits for the workspace, for the current billing period.
+
+        The read itself costs no credits.
+
+        ``available`` and ``limit`` are ``null`` on an unlimited plan, so test for ``None`` before
+        comparing — ``available > 0`` raises on an unlimited workspace. ``available`` counts the
+        recurring allowance only; what a request can still spend is ``available + extra``.
+
+        Example
+        -------
+        ::
+
+            credits = client.get_credits().generation_credits
+            if credits.available is None:
+                print("unlimited")
+            else:
+                print(credits.available + credits.extra, "left")
+        """
+        return validate(CreditsBalance, await self._request("GET", "/credits"))
 
     # ── Projects ──────────────────────────────────────────────────────────────
 

@@ -45,6 +45,7 @@ SPEC_OPERATION_IDS = {
     "getGenerationRequest",
     "getFile",
     "listFonts",
+    "getCredits",
     "listProjects",
     "createProject",
     "exportBanners",
@@ -77,7 +78,7 @@ def test_every_method_is_a_spec_operation() -> None:
     assert SYNC_METHODS - HELPERS == {snake(op) for op in SPEC_OPERATION_IDS}
 
 
-def test_the_surface_is_the_twenty_one_endpoints_plus_two_helpers() -> None:
+def test_the_surface_is_the_twenty_two_endpoints_plus_two_helpers() -> None:
     # Pinned so that adding an endpoint is a deliberate act, in both clients and in the docs.
     assert SYNC_METHODS == {
         "verify_api_key",
@@ -90,6 +91,7 @@ def test_the_surface_is_the_twenty_one_endpoints_plus_two_helpers() -> None:
         "get_generation_request",
         "get_file",
         "list_fonts",
+        "get_credits",
         "list_projects",
         "create_project",
         "export_banners",
