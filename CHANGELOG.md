@@ -12,9 +12,37 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.2.0 | `v2026-09-02` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.3.0 | `v2026-09-24` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.3.0] — 2026-09-24
+
+_Generated from API version **`v2026-09-24`**._
+
+Minor, not patch: the models gained fields. No method changed, no signature moved, and nothing that
+worked against 1.2.0 needs touching — a generation body is a plain dict either way.
+
+### Added
+
+- **A `button` element accepts `icon_url` and `icon_color`.** `icon_url` is a public HTTP(s) URL of
+  an image to place beside the label; `icon_color` recolours it, and only bites on an **SVG** —
+  recolouring rewrites the paint inside the file, and a raster has none to rewrite. Sending
+  `icon_url` for a button designed without an icon adds one, rendered on the left at the label's
+  font size.
+
+  The icon's geometry — its size, its gap to the label, the side it sits on — belongs to the
+  design and is deliberately not overridable per generation, the same way a text layer's font
+  family is. Both fields ride the element dict like every other property, so there is nothing new
+  to call:
+
+  ```python
+  client.generate_image(
+      template_id,
+      elements={"button_0": {"icon_url": "https://example.com/star.svg", "icon_color": "#FF0000"}},
+  )
+  ```
 
 ## [1.2.0] — 2026-09-02
 
