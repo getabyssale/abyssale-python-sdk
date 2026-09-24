@@ -56,6 +56,19 @@ class SigningSecret(BaseModel):
     ] = None
 
 
+class Reason(Enum):
+    """
+    Why a `preview_generation_failed` warning was raised; absent on every other code.
+    `render_failed`: the format could not be rendered, so the design itself may need
+    fixing — `message` says why when it can. `preview_not_stored`: the format rendered
+    but its preview could not be stored.
+
+    """
+
+    render_failed = 'render_failed'
+    preview_not_stored = 'preview_not_stored'
+
+
 class Warning(BaseModel):
     """
     One non-fatal note attached to an otherwise successful response — the `warnings` array on
@@ -83,6 +96,13 @@ class Warning(BaseModel):
         Field(
             description='Where in the payload the warning applies, same syntax as `Problem.path`.',
             examples=['layers[2].properties.color'],
+        ),
+    ] = None
+    reason: Annotated[
+        Reason | None,
+        Field(
+            description='Why a `preview_generation_failed` warning was raised; absent on every other code.\n`render_failed`: the format could not be rendered, so the design itself may need\nfixing — `message` says why when it can. `preview_not_stored`: the format rendered\nbut its preview could not be stored.\n',
+            examples=['render_failed'],
         ),
     ] = None
     layer: Annotated[
@@ -2342,7 +2362,7 @@ class RootElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2379,13 +2399,13 @@ class TextElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n'
+            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2521,13 +2541,13 @@ class ButtonElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n'
+            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2859,7 +2879,7 @@ class ShapeElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None

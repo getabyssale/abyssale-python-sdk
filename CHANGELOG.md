@@ -12,37 +12,10 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.4.0 | `v2026-09-24` | [spec](https://developers.abyssale.com/api.yaml) |
-| 1.3.0 | `v2026-09-24` | |
+| 1.3.0 | `v2026-09-24` | [spec](https://developers.abyssale.com/api.yaml) |
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
-
-## [1.4.0] — 2026-09-22
-
-Models regenerated against API version `v2026-09-24`, which has gained fields since 1.3.0 — the
-API version string is unchanged because one version is maintained at a time and this one grew.
-Minor, not patch: the element models are wider. No method changed and no signature moved.
-
-### Added
-
-- **A `button` element accepts `text_shadow_color`, `text_shadow_blur`, `text_shadow_offset_x` and
-  `text_shadow_offset_y`.** A button carries **two** shadows, set separately: the existing
-  `shadow_*` properties are the shadow of the button **box**, these four are the shadow of its
-  **label**.
-
-- **A `button` element accepts `icon_encoded`.** The base64 / data-URI twin of `icon_url`, for an
-  icon held in memory rather than hosted. `icon_url` wins if both are sent, and the icon's geometry
-  belongs to the design, not to the generation.
-
-- **An `image` element accepts the five auto-focus properties at the top level**:
-  `auto_focus_model`, `focus_objects`, `focus_framing`, `focus_target` and `focus_zoom` — the flat
-  form of the matching `auto_focus_properties.*` fields. Both are accepted; the nested one wins
-  when both are sent. The `face` model is deprecated in favour of `people` with `focus_framing`.
-
-- **An `image` element accepts `expand` and `expand_properties`.** AI image expansion
-  (outpainting): extends the image past its original borders to fill the target area instead of
-  cropping or letterboxing it.
 
 ## [1.3.0] — 2026-09-24
 
@@ -70,6 +43,30 @@ worked against 1.2.0 needs touching — a generation body is a plain dict either
       elements={"button_0": {"icon_url": "https://example.com/star.svg", "icon_color": "#FF0000"}},
   )
   ```
+
+- **A `button` element accepts `text_shadow_color`, `text_shadow_blur`, `text_shadow_offset_x` and
+  `text_shadow_offset_y`.** A button carries **two** shadows, set separately: the existing
+  `shadow_*` properties are the shadow of the button **box**, these four are the shadow of its
+  **label**.
+
+- **A `button` element accepts `icon_encoded`.** The base64 / data-URI twin of `icon_url`, for an
+  icon held in memory rather than hosted. `icon_url` wins if both are sent, and the icon's geometry
+  belongs to the design, not to the generation.
+
+- **An `image` element accepts the five auto-focus properties at the top level**:
+  `auto_focus_model`, `focus_objects`, `focus_framing`, `focus_target` and `focus_zoom` — the flat
+  form of the matching `auto_focus_properties.*` fields. Both are accepted; the nested one wins
+  when both are sent. The `face` model is deprecated in favour of `people` with `focus_framing`.
+
+- **An `image` element accepts `expand` and `expand_properties`.** AI image expansion
+  (outpainting): extends the image past its original borders to fill the target area instead of
+  cropping or letterboxing it.
+
+### Changed
+
+- **Colour fields document a linear gradient of 2 to 8 stops**, as `v2026-09-24` accepts, instead of
+  exactly two, and say where print takes one: only a shape or button `background_color`.
+  The models are unchanged — a colour is a `str` either way.
 
 ## [1.2.0] — 2026-09-02
 
