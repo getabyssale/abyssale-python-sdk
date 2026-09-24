@@ -2421,7 +2421,7 @@ class TextElement(BaseModel):
     font: Annotated[
         UUID | None,
         Field(
-            description='**Force a specific font by ID**. *Example: 6156907e-33c5-11ea-9877-92672c1b8195*\n\nThe fonts list is available by calling the [GET /fonts](#tag/Fonts) API route.\n'
+            description='**Force a specific font by ID**. *Example: 6156907e-33c5-11ea-9877-92672c1b8195*\n\nThe fonts list is available by calling the [GET /fonts](/api-reference/#fonts) API route.\n'
         ),
     ] = None
     font_weight: FontWeight | None = None
@@ -2563,7 +2563,7 @@ class ButtonElement(BaseModel):
     font: Annotated[
         UUID | None,
         Field(
-            description='**Force a specific font by ID**. *Example: 6156907e-33c5-11ea-9877-92672c1b8195*\n\nThe fonts list is available by calling the [GET /fonts](#tag/Fonts) API route.\n'
+            description='**Force a specific font by ID**. *Example: 6156907e-33c5-11ea-9877-92672c1b8195*\n\nThe fonts list is available by calling the [GET /fonts](/api-reference/#fonts) API route.\n'
         ),
     ] = None
     font_weight: FontWeight | None = None
