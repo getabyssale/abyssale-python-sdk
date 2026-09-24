@@ -56,6 +56,19 @@ class SigningSecret(BaseModel):
     ] = None
 
 
+class Reason(Enum):
+    """
+    Why a `preview_generation_failed` warning was raised; absent on every other code.
+    `render_failed`: the format could not be rendered, so the design itself may need
+    fixing — `message` says why when it can. `preview_not_stored`: the format rendered
+    but its preview could not be stored.
+
+    """
+
+    render_failed = 'render_failed'
+    preview_not_stored = 'preview_not_stored'
+
+
 class Warning(BaseModel):
     """
     One non-fatal note attached to an otherwise successful response — the `warnings` array on
@@ -83,6 +96,13 @@ class Warning(BaseModel):
         Field(
             description='Where in the payload the warning applies, same syntax as `Problem.path`.',
             examples=['layers[2].properties.color'],
+        ),
+    ] = None
+    reason: Annotated[
+        Reason | None,
+        Field(
+            description='Why a `preview_generation_failed` warning was raised; absent on every other code.\n`render_failed`: the format could not be rendered, so the design itself may need\nfixing — `message` says why when it can. `preview_not_stored`: the format rendered\nbut its preview could not be stored.\n',
+            examples=['render_failed'],
         ),
     ] = None
     layer: Annotated[
@@ -371,7 +391,7 @@ class Design(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-02'],
+            examples=['v2026-09-24'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1218,7 +1238,10 @@ class SharedElementProperties(BaseModel):
         Field(description='`true`, `false`. If true it hides the current element'),
     ] = None
     shadow_color: Annotated[
-        str | None, Field(description='6-8 digits hexadecimal color')
+        str | None,
+        Field(
+            description='6-8 digits hexadecimal color. On a `button` this is the shadow of the **button box**; its label has its own, `text_shadow_color`.'
+        ),
     ] = None
     shadow_blur: Annotated[
         float | None, Field(description='Blur in pixels', ge=0.0)
@@ -1249,7 +1272,7 @@ class Element1(SharedElementProperties):
 
 class AsyncElement1(SharedElementProperties):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -1295,6 +1318,58 @@ class RemoveBgProperties(BaseModel):
     ] = None
 
 
+class AutoFocusModel(Enum):
+    """
+    `auto_focus_properties.model` at the top level — the form these five properties were
+    moved to, and the one the renderer is handed. Both are accepted; the nested one wins
+    when you send both, being the more specific.
+
+    **`face` is deprecated** — see `auto_focus_properties.model`.
+
+    """
+
+    generic = 'generic'
+    people = 'people'
+    face = 'face'
+
+
+class FocusFraming(Enum):
+    """
+    `auto_focus_properties.focus_framing` at the top level. Specific to the `people` model.
+
+    """
+
+    face = 'face'
+    head = 'head'
+    shoulders = 'shoulders'
+    full_body = 'full_body'
+
+
+class FocusZoom(Enum):
+    """
+    `auto_focus_properties.focus_zoom` at the top level. Specific to the `people` model.
+
+    """
+
+    False_ = False
+    low = 'low'
+    medium = 'medium'
+    max = 'max'
+
+
+class FocusTarget(Enum):
+    """
+    `auto_focus_properties.focus_target` at the top level. Specific to the `people` model.
+
+    """
+
+    largest = 'largest'
+    left = 'left'
+    middle = 'middle'
+    right = 'right'
+    all = 'all'
+
+
 class Model(Enum):
     """
     Model used for focusing. `generic` for objects, `people` for human subjects.
@@ -1312,7 +1387,7 @@ class Model(Enum):
     face = 'face'
 
 
-class FocusFraming(Enum):
+class FocusFraming1(Enum):
     """
     Specific to `people` model. Defines which part of the subject to frame. Default is `face`, which is why `people` alone replaces the deprecated `face` model.
     """
@@ -1323,7 +1398,7 @@ class FocusFraming(Enum):
     full_body = 'full_body'
 
 
-class FocusZoom(Enum):
+class FocusZoom1(Enum):
     """
     Specific to `people` model. Controls the zoom level applied. Default is `max`.
     """
@@ -1334,7 +1409,7 @@ class FocusZoom(Enum):
     max = 'max'
 
 
-class FocusTarget(Enum):
+class FocusTarget1(Enum):
     """
     Specific to `people` model. When multiple subjects are detected, defines which one to target. Default is `all`.
     """
@@ -1367,19 +1442,19 @@ class AutoFocusProperties(BaseModel):
         ),
     ] = None
     focus_framing: Annotated[
-        FocusFraming | None,
+        FocusFraming1 | None,
         Field(
             description='Specific to `people` model. Defines which part of the subject to frame. Default is `face`, which is why `people` alone replaces the deprecated `face` model.'
         ),
     ] = None
     focus_zoom: Annotated[
-        FocusZoom | None,
+        FocusZoom1 | None,
         Field(
             description='Specific to `people` model. Controls the zoom level applied. Default is `max`.'
         ),
     ] = None
     focus_target: Annotated[
-        FocusTarget | None,
+        FocusTarget1 | None,
         Field(
             description='Specific to `people` model. When multiple subjects are detected, defines which one to target. Default is `all`.'
         ),
@@ -1420,6 +1495,43 @@ class RemoveBgProperties1(BaseModel):
     ] = None
 
 
+class FocusFraming2(Enum):
+    """
+    `auto_focus_properties.focus_framing` at the top level. Specific to the `people` model.
+
+    """
+
+    face = 'face'
+    head = 'head'
+    shoulders = 'shoulders'
+    full_body = 'full_body'
+
+
+class FocusZoom2(Enum):
+    """
+    `auto_focus_properties.focus_zoom` at the top level. Specific to the `people` model.
+
+    """
+
+    False_ = False
+    low = 'low'
+    medium = 'medium'
+    max = 'max'
+
+
+class FocusTarget2(Enum):
+    """
+    `auto_focus_properties.focus_target` at the top level. Specific to the `people` model.
+
+    """
+
+    largest = 'largest'
+    left = 'left'
+    middle = 'middle'
+    right = 'right'
+    all = 'all'
+
+
 class Model2(Enum):
     """
     Model used for focusing. `generic` for objects, `people` for human subjects.
@@ -1435,6 +1547,40 @@ class Model2(Enum):
     generic = 'generic'
     people = 'people'
     face = 'face'
+
+
+class FocusFraming3(Enum):
+    """
+    Specific to `people` model. Defines which part of the subject to frame. Default is `face`, which is why `people` alone replaces the deprecated `face` model.
+    """
+
+    face = 'face'
+    head = 'head'
+    shoulders = 'shoulders'
+    full_body = 'full_body'
+
+
+class FocusZoom3(Enum):
+    """
+    Specific to `people` model. Controls the zoom level applied. Default is `max`.
+    """
+
+    off = 'off'
+    low = 'low'
+    medium = 'medium'
+    max = 'max'
+
+
+class FocusTarget3(Enum):
+    """
+    Specific to `people` model. When multiple subjects are detected, defines which one to target. Default is `all`.
+    """
+
+    largest = 'largest'
+    left = 'left'
+    middle = 'middle'
+    right = 'right'
+    all = 'all'
 
 
 class AutoFocusProperties1(BaseModel):
@@ -1458,19 +1604,19 @@ class AutoFocusProperties1(BaseModel):
         ),
     ] = None
     focus_framing: Annotated[
-        FocusFraming | None,
+        FocusFraming3 | None,
         Field(
             description='Specific to `people` model. Defines which part of the subject to frame. Default is `face`, which is why `people` alone replaces the deprecated `face` model.'
         ),
     ] = None
     focus_zoom: Annotated[
-        FocusZoom | None,
+        FocusZoom3 | None,
         Field(
             description='Specific to `people` model. Controls the zoom level applied. Default is `max`.'
         ),
     ] = None
     focus_target: Annotated[
-        FocusTarget | None,
+        FocusTarget3 | None,
         Field(
             description='Specific to `people` model. When multiple subjects are detected, defines which one to target. Default is `all`.'
         ),
@@ -1478,6 +1624,32 @@ class AutoFocusProperties1(BaseModel):
 
 
 class Model3(Enum):
+    """
+    Model used for expansion. Default is `flux-2-pro-outpaint`.
+    """
+
+    image_outpaint = 'image-outpaint'
+    flux_2_pro_outpaint = 'flux-2-pro-outpaint'
+    bria_expand = 'bria-expand'
+
+
+class ExpandProperties(BaseModel):
+    """
+    Settings for AI-powered image expansion (outpainting).
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    model: Annotated[
+        Model3 | None,
+        Field(
+            description='Model used for expansion. Default is `flux-2-pro-outpaint`.'
+        ),
+    ] = None
+
+
+class Model4(Enum):
     """
     Model used for generation. Default is `nano-banana-2`.
     Allowed `ratio` and `quality` values depend on the selected model — see the
@@ -1520,7 +1692,7 @@ class TextToImageProperties(BaseModel):
         ),
     ]
     model: Annotated[
-        Model3 | None,
+        Model4 | None,
         Field(
             description='Model used for generation. Default is `nano-banana-2`.\nAllowed `ratio` and `quality` values depend on the selected model — see the\n[Text to Image & Inpainting guide](https://developers.abyssale.com/rest-api/generation/element-properties/image#text-to-image-inpainting) for the full table.\n'
         ),
@@ -1600,7 +1772,7 @@ class DuplicationRequest(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-02'],
+            examples=['v2026-09-24'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1739,7 +1911,7 @@ class DynamicImageResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-02'],
+            examples=['v2026-09-24'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2062,7 +2234,7 @@ class ErrorResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-02'],
+            examples=['v2026-09-24'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2190,7 +2362,7 @@ class RootElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2)` _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2204,7 +2376,7 @@ class Element11(AudioElement, Element1):
 
 class AsyncElement11(AudioElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2227,13 +2399,13 @@ class TextElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2)`\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n'
+            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2)` _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2369,13 +2541,13 @@ class ButtonElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2)`\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n'
+            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2)` _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2442,6 +2614,49 @@ class ButtonElement(BaseModel):
             description='Automatically adjusts the label size to fit the button. When true, `min_font_size` must also be defined.'
         ),
     ] = None
+    text_shadow_color: Annotated[
+        str | None,
+        Field(
+            description="**Shadow of the button's label**, in 6-8 hexadecimal digits. A button carries two shadows: `shadow_color` and its `shadow_*` siblings drop the **box**, these drop the **text inside it**. Both can be set at once."
+        ),
+    ] = None
+    text_shadow_blur: Annotated[
+        float | None, Field(description="Blur of the label's shadow, in pixels", ge=0.0)
+    ] = None
+    text_shadow_offset_x: Annotated[
+        float | None,
+        Field(
+            description="Horizontal offset of the label's shadow, in pixels (can be negative)",
+            ge=-200.0,
+            le=200.0,
+        ),
+    ] = None
+    text_shadow_offset_y: Annotated[
+        float | None,
+        Field(
+            description="Vertical offset of the label's shadow, in pixels (can be negative)",
+            ge=-200.0,
+            le=200.0,
+        ),
+    ] = None
+    icon_url: Annotated[
+        AnyUrl | None,
+        Field(
+            description="**HTTP(s) URL of the button's icon** — the small image displayed beside the label.\n*Example: https://www.abyssale.com/imge/star.svg*\n\n__It must be publicly accessible__, and the same size limits as `image_url` apply.\n\nSupported files: jpeg, jpg, png, webp, svg, gif, tiff, tif, avif\n\nOnly a `button` layer takes it. It replaces the icon the design carries, or gives one to a\nbutton designed without — a button that had none renders it on the left, at the label's\nfont size, with no gap, since those are the icon defaults.\n\nThe icon's geometry (its size, its gap to the label and the side it sits on) belongs to\nthe design and cannot be overridden per generation.\n"
+        ),
+    ] = None
+    icon_encoded: Annotated[
+        str | None,
+        Field(
+            description="**Base64 encoded icon as value** — the `icon_url` alternative, exactly as `image_encoded`\nis to `image_url`. *Example: /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAIBAQE...*\n\nEither a bare base64 body or a `data:image/<type>;base64,` data URI; the prefix is stripped\nfor you. The same mimetypes and the same size cap as `image_encoded` apply, and the value is\nnever stored on the generation request.\n\n__If `icon_url` is given, this parameter will not be used.__\n\nOnly a `button` layer takes it, and the icon's geometry still belongs to the design — see\n`icon_url`.\n"
+        ),
+    ] = None
+    icon_color: Annotated[
+        str | None,
+        Field(
+            description="**Color applied to the button's icon.**\n\n- `Monochrome`: 6 or 8 hexadecimal digits starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\n__Only an SVG icon can be recoloured__ — on any other file type the icon is drawn as-is\nand this parameter is ignored. There is no gradient form: an icon takes one flat colour.\n"
+        ),
+    ] = None
 
 
 class ImageElement(BaseModel):
@@ -2499,6 +2714,36 @@ class ImageElement(BaseModel):
             description='Activates AI-powered auto-focus to detect and focus on specified objects or people within the image.'
         ),
     ] = None
+    auto_focus_model: Annotated[
+        AutoFocusModel | None,
+        Field(
+            description='`auto_focus_properties.model` at the top level — the form these five properties were\nmoved to, and the one the renderer is handed. Both are accepted; the nested one wins\nwhen you send both, being the more specific.\n\n**`face` is deprecated** — see `auto_focus_properties.model`.\n'
+        ),
+    ] = None
+    focus_objects: Annotated[
+        list[str] | None,
+        Field(
+            description='`auto_focus_properties.focus_objects` at the top level. Generic model only.\n'
+        ),
+    ] = None
+    focus_framing: Annotated[
+        FocusFraming | None,
+        Field(
+            description='`auto_focus_properties.focus_framing` at the top level. Specific to the `people` model.\n'
+        ),
+    ] = None
+    focus_zoom: Annotated[
+        FocusZoom | None,
+        Field(
+            description='`auto_focus_properties.focus_zoom` at the top level. Specific to the `people` model.\n'
+        ),
+    ] = None
+    focus_target: Annotated[
+        FocusTarget | None,
+        Field(
+            description='`auto_focus_properties.focus_target` at the top level. Specific to the `people` model.\n'
+        ),
+    ] = None
     auto_focus_properties: Annotated[
         AutoFocusProperties | None,
         Field(description='Additional settings for auto-focus.'),
@@ -2507,7 +2752,7 @@ class ImageElement(BaseModel):
 
 class AsyncImageElement(BaseModel):
     """
-    Image element properties available for asynchronous generation, including AI image generation, inpainting, and background removal model selection.
+    Image element properties available for asynchronous generation, including AI image generation, inpainting, background removal model selection, and AI expand/outpainting.
     """
 
     model_config = ConfigDict(
@@ -2558,6 +2803,36 @@ class AsyncImageElement(BaseModel):
             description='Activates AI-powered auto-focus to detect and focus on specified objects or people within the image.'
         ),
     ] = None
+    auto_focus_model: Annotated[
+        AutoFocusModel | None,
+        Field(
+            description='`auto_focus_properties.model` at the top level — the form these five properties were\nmoved to, and the one the renderer is handed. Both are accepted; the nested one wins\nwhen you send both, being the more specific.\n\n**`face` is deprecated** — see `auto_focus_properties.model`.\n'
+        ),
+    ] = None
+    focus_objects: Annotated[
+        list[str] | None,
+        Field(
+            description='`auto_focus_properties.focus_objects` at the top level. Generic model only.\n'
+        ),
+    ] = None
+    focus_framing: Annotated[
+        FocusFraming2 | None,
+        Field(
+            description='`auto_focus_properties.focus_framing` at the top level. Specific to the `people` model.\n'
+        ),
+    ] = None
+    focus_zoom: Annotated[
+        FocusZoom2 | None,
+        Field(
+            description='`auto_focus_properties.focus_zoom` at the top level. Specific to the `people` model.\n'
+        ),
+    ] = None
+    focus_target: Annotated[
+        FocusTarget2 | None,
+        Field(
+            description='`auto_focus_properties.focus_target` at the top level. Specific to the `people` model.\n'
+        ),
+    ] = None
     auto_focus_properties: Annotated[
         AutoFocusProperties1 | None,
         Field(description='Additional settings for auto-focus.'),
@@ -2569,6 +2844,13 @@ class AsyncImageElement(BaseModel):
         ),
     ] = None
     text_to_image_properties: TextToImageProperties | None = None
+    expand: Annotated[
+        bool | None,
+        Field(
+            description='Activates AI-powered image expansion (outpainting): extends the image beyond its\noriginal borders to fill the target area instead of cropping or letterboxing it.\n`true` uses `expand_properties`.\n'
+        ),
+    ] = None
+    expand_properties: ExpandProperties | None = None
 
 
 class LogoElement(BaseModel):
@@ -2597,7 +2879,7 @@ class ShapeElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2)` _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2798,7 +3080,7 @@ class DuplicationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-02'],
+            examples=['v2026-09-24'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2829,7 +3111,7 @@ class GenerationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-02'],
+            examples=['v2026-09-24'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2891,7 +3173,7 @@ class Element10(VideoElement, Element1):
 
 class AsyncElement2(TextElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2901,7 +3183,7 @@ class AsyncElement2(TextElement, AsyncElement1):
 
 class AsyncElement3(AsyncImageElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2911,7 +3193,7 @@ class AsyncElement3(AsyncImageElement, AsyncElement1):
 
 class AsyncElement4(ButtonElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2921,7 +3203,7 @@ class AsyncElement4(ButtonElement, AsyncElement1):
 
 class AsyncElement5(LogoElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2931,7 +3213,7 @@ class AsyncElement5(LogoElement, AsyncElement1):
 
 class AsyncElement6(ShapeElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2941,7 +3223,7 @@ class AsyncElement6(ShapeElement, AsyncElement1):
 
 class AsyncElement7(RatingElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2951,7 +3233,7 @@ class AsyncElement7(RatingElement, AsyncElement1):
 
 class AsyncElement8(IllustrationElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2961,7 +3243,7 @@ class AsyncElement8(IllustrationElement, AsyncElement1):
 
 class AsyncElement9(QRCodeElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2971,7 +3253,7 @@ class AsyncElement9(QRCodeElement, AsyncElement1):
 
 class AsyncElement10(VideoElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
