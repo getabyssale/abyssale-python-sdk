@@ -12,7 +12,7 @@ videos, HTML5 banners and print-ready PDFs from your designs.
 pip install abyssale
 ```
 
-Requires Python 3.10+. This release models API version **`v2026-09-24`** — see
+Requires Python 3.10+. This release models API version **`v2026-09-25`** — see
 [CHANGELOG.md](https://github.com/getabyssale/abyssale-python-sdk/blob/main/CHANGELOG.md) for the
 SDK-to-API version pairing, and `abyssale.__api_version__` to read it at runtime.
 
