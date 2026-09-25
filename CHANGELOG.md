@@ -12,10 +12,34 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.3.0 | `v2026-09-24` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.3.1 | `v2026-09-25` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.3.0 | `v2026-09-24` | |
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.3.1] — 2026-09-25
+
+_Generated from API version **`v2026-09-25`**._
+
+Patch: no model gained or lost a field and no type changed — a colour is a `str` either way. The
+regeneration only rewrote the descriptions of the colour fields to the one colour grammar
+`v2026-09-25` publishes.
+
+### Changed
+
+- **Colour fields document what you may send.** Hex is `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`;
+  CMYK is `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally
+  followed by `%`. A gradient stop is `#RRGGBB`, `#RGB` or `cmyk(C,M,Y,K)` — no alpha, its
+  transparency is the stop opacity (`0` to `1`) — at an offset of `0%` to `100%`.
+
+### Worth knowing — an API change, not an SDK one
+
+`v2026-09-25` **refuses with `400 invalid_payload`** colours it used to draw wrong or fail on: a
+CMYK component or alpha above `100`, a gradient stop offset above `100%`, a stop opacity above `1`
+and a 4-digit hex gradient stop. Request bodies are plain dicts passed through untouched, so this
+reaches you whatever SDK version you run, as an `AbyssaleAPIError` whose `id` is
+`invalid_payload`. See the [API changelog](https://developers.abyssale.com/rest-api/changelog).
 
 ## [1.3.0] — 2026-09-24
 

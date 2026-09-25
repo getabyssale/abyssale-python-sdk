@@ -391,7 +391,7 @@ class Design(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-24'],
+            examples=['v2026-09-25'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1240,7 +1240,7 @@ class SharedElementProperties(BaseModel):
     shadow_color: Annotated[
         str | None,
         Field(
-            description='6-8 digits hexadecimal color. On a `button` this is the shadow of the **button box**; its label has its own, `text_shadow_color`.'
+            description='Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or `cmyk(...)` / `cmyka(...)`; no gradient. On a `button` this is the shadow of the **button box**; its label has its own, `text_shadow_color`.'
         ),
     ] = None
     shadow_blur: Annotated[
@@ -1772,7 +1772,7 @@ class DuplicationRequest(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-24'],
+            examples=['v2026-09-25'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1911,7 +1911,7 @@ class DynamicImageResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-24'],
+            examples=['v2026-09-25'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2194,7 +2194,7 @@ class IllustrationProperties(BaseModel):
     primary_color: Annotated[
         str | None,
         Field(
-            description='**Color of the illustration** \n\n*A 6 or 8 hexadecimal shape color starting with a **#**.** *Example: #EAEAEA or #FF00FF55_*\n'
+            description='**Color of the illustration** \n\nHex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(C,M,Y,K)` / `cmyka(C,M,Y,K,A)` with components 0–100. No gradient. _i.e. #EAEAEA or #FF00FF55_\n'
         ),
     ] = None
 
@@ -2234,7 +2234,7 @@ class ErrorResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-24'],
+            examples=['v2026-09-25'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2362,7 +2362,7 @@ class RootElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2399,13 +2399,13 @@ class TextElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
+            description='**The text color.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2450,7 +2450,7 @@ class TextElement(BaseModel):
     stroke_color: Annotated[
         str | None,
         Field(
-            description="**Stroke Color. 6-8 digits Hexa color.**. *Example: #FF0000*\n\n__If your design does not contain any stroke, this color won't be visible__\n"
+            description="**Stroke color.** Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient. *Example: #FF0000*\n\n__If your design does not contain any stroke, this color won't be visible__\n"
         ),
     ] = None
     text_transform: TextTransform | None = None
@@ -2495,7 +2495,7 @@ class TextElement(BaseModel):
     side_border_color: Annotated[
         str | None,
         Field(
-            description='Color of the side border. 6-8 digits hexadecimal or cmyka (for print).'
+            description='Color of the side border. Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient.'
         ),
     ] = None
     side_border_rounded: Annotated[
@@ -2541,13 +2541,13 @@ class ButtonElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset.\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
+            description='**The text color.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2590,7 +2590,7 @@ class ButtonElement(BaseModel):
     stroke_color: Annotated[
         str | None,
         Field(
-            description="**Stroke Color. 6-8 digits Hexa color.**. *Example: #FF0000*\n\n__If your design does not contain any stroke, this color won't be visible__\n"
+            description="**Stroke color.** Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient. *Example: #FF0000*\n\n__If your design does not contain any stroke, this color won't be visible__\n"
         ),
     ] = None
     stroke_width: Annotated[
@@ -2617,7 +2617,7 @@ class ButtonElement(BaseModel):
     text_shadow_color: Annotated[
         str | None,
         Field(
-            description="**Shadow of the button's label**, in 6-8 hexadecimal digits. A button carries two shadows: `shadow_color` and its `shadow_*` siblings drop the **box**, these drop the **text inside it**. Both can be set at once."
+            description="**Shadow of the button's label**: hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or `cmyk(...)` / `cmyka(...)`; no gradient. A button carries two shadows: `shadow_color` and its `shadow_*` siblings drop the **box**, these drop the **text inside it**. Both can be set at once."
         ),
     ] = None
     text_shadow_blur: Annotated[
@@ -2654,7 +2654,7 @@ class ButtonElement(BaseModel):
     icon_color: Annotated[
         str | None,
         Field(
-            description="**Color applied to the button's icon.**\n\n- `Monochrome`: 6 or 8 hexadecimal digits starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100.\n\n__Only an SVG icon can be recoloured__ — on any other file type the icon is drawn as-is\nand this parameter is ignored. There is no gradient form: an icon takes one flat colour.\n"
+            description="**Color applied to the button's icon.**\n\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\n__Only an SVG icon can be recoloured__ — on any other file type the icon is drawn as-is\nand this parameter is ignored. There is no gradient form: an icon takes one flat colour.\n"
         ),
     ] = None
 
@@ -2688,11 +2688,15 @@ class ImageElement(BaseModel):
     overlay_direction: OverlayDirection | None = None
     overlay_color_1: Annotated[
         str | None,
-        Field(description='First color of the overlay. 6-8 Digits Hexa color.'),
+        Field(
+            description='First color of the overlay. Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient.'
+        ),
     ] = None
     overlay_color_2: Annotated[
         str | None,
-        Field(description='Second color of the overlay. 6-8 Digits Hexa color.'),
+        Field(
+            description='Second color of the overlay. Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient.'
+        ),
     ] = None
     remove_bg: Annotated[
         bool | None,
@@ -2783,11 +2787,15 @@ class AsyncImageElement(BaseModel):
     overlay_direction: OverlayDirection | None = None
     overlay_color_1: Annotated[
         str | None,
-        Field(description='First color of the overlay. 6-8 Digits Hexa color.'),
+        Field(
+            description='First color of the overlay. Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient.'
+        ),
     ] = None
     overlay_color_2: Annotated[
         str | None,
-        Field(description='Second color of the overlay. 6-8 Digits Hexa color.'),
+        Field(
+            description='Second color of the overlay. Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient.'
+        ),
     ] = None
     remove_bg: Annotated[
         bool | None,
@@ -2879,7 +2887,7 @@ class ShapeElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Monochrome`: 6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% #color1 opacity1,offset2% #color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n- `Cmyka` (print only): `cmyka(c,m,y,k)` or `cmyka(c,m,y,k,alpha)` where each value is 0–100. _i.e. cmyka(0,100,100,0,100)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)` or `#RRGGBB` stops; on the\nformat background (`root`) or any other element it is refused with `400 invalid_payload`.\n',
+            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
             examples=['#FF0000'],
         ),
     ] = None
@@ -2887,7 +2895,7 @@ class ShapeElement(BaseModel):
     pattern_color: Annotated[
         str | None,
         Field(
-            description='**A 6 or 8 hexadecimal shape color starting with a `#`.** *Example: #EAEAEA or #FF00FF55*\n\n_If no pattern is applied to the shape, this property will not change anything._\n',
+            description='**The color of the pattern.** Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(C,M,Y,K)` / `cmyka(C,M,Y,K,A)` with components 0–100. No gradient. _i.e. #EAEAEA or #FF00FF55_\n\n_If no pattern is applied to the shape, this property will not change anything._\n',
             examples=['#EAEAEA'],
         ),
     ] = None
@@ -2902,7 +2910,7 @@ class ShapeElement(BaseModel):
     stroke_color: Annotated[
         str | None,
         Field(
-            description="**Stroke Color. 6-8 digits Hexa color.**. *Example: #FF0000*\n\n__If your design does not contain any stroke, this color won't be visible__\n"
+            description="**Stroke color.** Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(...)` / `cmyka(...)`; no gradient. *Example: #FF0000*\n\n__If your design does not contain any stroke, this color won't be visible__\n"
         ),
     ] = None
 
@@ -2938,13 +2946,13 @@ class RatingElement(BaseModel):
     star_color: Annotated[
         str | None,
         Field(
-            description='**The color of the filled stars.**\n\n6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n'
+            description='**The color of the filled stars.**\n\nHex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(C,M,Y,K)` / `cmyka(C,M,Y,K,A)` with components 0–100. No gradient. _i.e. #EAEAEA or #FF00FF55_\n'
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind all the stars.**\n\n6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n'
+            description='**The background color displayed behind all the stars.**\n\nHex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(C,M,Y,K)` / `cmyka(C,M,Y,K,A)` with components 0–100. No gradient. _i.e. #EAEAEA or #FF00FF55_\n'
         ),
     ] = None
 
@@ -2978,13 +2986,13 @@ class QRCodeElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the qrcode.**\n\n6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n'
+            description='**The background color displayed behind the qrcode.**\n\nHex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(C,M,Y,K)` / `cmyka(C,M,Y,K,A)` with components 0–100. No gradient. _i.e. #EAEAEA or #FF00FF55_\n'
         ),
     ] = None
     foreground_color: Annotated[
         str | None,
         Field(
-            description='**The color of the qrcode (of all squares).**\n\n6 or 8 hexadecimal colors starting with a **#**. _i.e. #EAEAEA or #FF00FF55_\n'
+            description='**The color of the qrcode (of all squares).**\n\nHex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or, for print, `cmyk(C,M,Y,K)` / `cmyka(C,M,Y,K,A)` with components 0–100. No gradient. _i.e. #EAEAEA or #FF00FF55_\n'
         ),
     ] = None
     payload: Annotated[
@@ -3080,7 +3088,7 @@ class DuplicationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-24'],
+            examples=['v2026-09-25'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -3111,7 +3119,7 @@ class GenerationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-24'],
+            examples=['v2026-09-25'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
