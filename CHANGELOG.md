@@ -12,11 +12,38 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.3.1 | `v2026-09-25` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.4.0 | `v2026-10-01` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.3.1 | `v2026-09-25` | |
 | 1.3.0 | `v2026-09-24` | |
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.4.0] — 2026-10-01
+
+_Generated from API version **`v2026-10-01`**, which also brings `v2026-09-30`._
+
+Minor: the models gained the upscale settings and new model names. Nothing was removed or narrowed,
+so there is no upgrade step beyond installing it.
+
+### Added
+
+- **Upscale on the image element** (`v2026-09-30`): `upscale` and `upscale_properties` on the
+  asynchronous image element, modelled by `UpscaleProperties` (`model`: `seedvr-upscale`,
+  `topaz-precision`, `crystal-upscaler` or `bria-increase-resolution`; `upscale_factor`: `1` to
+  `4`). Asynchronous generation only: the API refuses it on synchronous generation. Request bodies
+  stay plain dicts, so this is documentation for what you send, not a new class to import.
+- **Three text-to-image and inpainting models** (`v2026-09-30`): `gpt-image-2.5-sunburst`,
+  `gpt-image-2.5-flare` and `seedream-5-pro`.
+- **`design_in_open_product`** among the documented error ids.
+
+### Changed
+
+- **Colour fields document radial gradients** (`v2026-10-01`). Every field that takes a linear
+  gradient also takes `radial-gradient(cx% cy% r%,<stops>)`: a centre and a radius as percentages
+  of the layer's box, then the same 2 to 8 stops. A colour is a `str` either way, so only the field
+  descriptions changed. See the
+  [API changelog](https://developers.abyssale.com/rest-api/changelog).
 
 ## [1.3.1] — 2026-09-25
 

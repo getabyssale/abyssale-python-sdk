@@ -391,7 +391,7 @@ class Design(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-25'],
+            examples=['v2026-10-01'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1272,7 +1272,7 @@ class Element1(SharedElementProperties):
 
 class AsyncElement1(SharedElementProperties):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -1651,6 +1651,62 @@ class ExpandProperties(BaseModel):
 
 class Model4(Enum):
     """
+    Model used for upscaling. Default is `seedvr-upscale`.
+    Each model caps its output size and accepts its own `upscale_factor` values:
+
+    | Model | `upscale_factor` | Max output |
+    |---|---|---|
+    | `seedvr-upscale` | 1, 2, 3, 4 | 64 MP |
+    | `topaz-precision` | 1, 2, 3, 4 | 72 MP |
+    | `crystal-upscaler` | 1, 2, 3, 4 | 16 MP |
+    | `bria-increase-resolution` | 2, 4 | 8192 px |
+
+    """
+
+    seedvr_upscale = 'seedvr-upscale'
+    topaz_precision = 'topaz-precision'
+    crystal_upscaler = 'crystal-upscaler'
+    bria_increase_resolution = 'bria-increase-resolution'
+
+
+class UpscaleFactor(Enum):
+    """
+    Multiplier applied to the source image's width and height. Default is `2`.
+    `1` keeps the dimensions and only enhances detail. `bria-increase-resolution` accepts
+    `2` and `4` only.
+
+    """
+
+    number_1 = 1
+    number_2 = 2
+    number_3 = 3
+    number_4 = 4
+
+
+class UpscaleProperties(BaseModel):
+    """
+    Settings for AI-powered upscaling.
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    model: Annotated[
+        Model4 | None,
+        Field(
+            description='Model used for upscaling. Default is `seedvr-upscale`.\nEach model caps its output size and accepts its own `upscale_factor` values:\n\n| Model | `upscale_factor` | Max output |\n|---|---|---|\n| `seedvr-upscale` | 1, 2, 3, 4 | 64 MP |\n| `topaz-precision` | 1, 2, 3, 4 | 72 MP |\n| `crystal-upscaler` | 1, 2, 3, 4 | 16 MP |\n| `bria-increase-resolution` | 2, 4 | 8192 px |\n'
+        ),
+    ] = None
+    upscale_factor: Annotated[
+        UpscaleFactor | None,
+        Field(
+            description="Multiplier applied to the source image's width and height. Default is `2`.\n`1` keeps the dimensions and only enhances detail. `bria-increase-resolution` accepts\n`2` and `4` only.\n"
+        ),
+    ] = None
+
+
+class Model5(Enum):
+    """
     Model used for generation. Default is `nano-banana-2`.
     Allowed `ratio` and `quality` values depend on the selected model — see the
     [Text to Image & Inpainting guide](https://developers.abyssale.com/rest-api/generation/element-properties/image#text-to-image-inpainting) for the full table.
@@ -1672,6 +1728,9 @@ class Model4(Enum):
     gpt_image_2 = 'gpt-image-2'
     grok_imagine = 'grok-imagine'
     flux_2_klein_9b = 'flux-2-klein-9b'
+    gpt_image_2_5_sunburst = 'gpt-image-2.5-sunburst'
+    gpt_image_2_5_flare = 'gpt-image-2.5-flare'
+    seedream_5_pro = 'seedream-5-pro'
 
 
 class TextToImageProperties(BaseModel):
@@ -1692,7 +1751,7 @@ class TextToImageProperties(BaseModel):
         ),
     ]
     model: Annotated[
-        Model4 | None,
+        Model5 | None,
         Field(
             description='Model used for generation. Default is `nano-banana-2`.\nAllowed `ratio` and `quality` values depend on the selected model — see the\n[Text to Image & Inpainting guide](https://developers.abyssale.com/rest-api/generation/element-properties/image#text-to-image-inpainting) for the full table.\n'
         ),
@@ -1772,7 +1831,7 @@ class DuplicationRequest(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-25'],
+            examples=['v2026-10-01'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1911,7 +1970,7 @@ class DynamicImageResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-25'],
+            examples=['v2026-10-01'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2220,7 +2279,7 @@ class ErrorResponse(BaseModel):
     id: Annotated[
         str,
         Field(
-            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unreachable_src`, `invalid_query_param`, `invalid_filetype`,\n`invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These two are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`.\n\n**Retrying never helps — something has to change first.** The plan or the credit\nbalance: `feature_not_in_plan`, `api_access_denied`. Note that `rate_limit_exceeded`\nlands here too when it means "not enough credits"; the message is what tells the two\napart, which is why both entries name it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`,\n`previous_secret_still_active`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
+            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unreachable_src`, `invalid_query_param`, `invalid_filetype`,\n`invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These two are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`.\n\n**Retrying never helps — something has to change first.** The plan or the credit\nbalance: `feature_not_in_plan`, `api_access_denied`. Note that `rate_limit_exceeded`\nlands here too when it means "not enough credits"; the message is what tells the two\napart, which is why both entries name it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`,\n`previous_secret_still_active`, `design_in_open_product`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
         ),
     ]
     errors: Annotated[
@@ -2234,7 +2293,7 @@ class ErrorResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-25'],
+            examples=['v2026-10-01'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2362,7 +2421,7 @@ class RootElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
+            description="**The background color displayed behind the element.**\n\n4 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `Radial Gradient`: `radial-gradient(cx% cy% r%,offset1% color1 opacity1,offset2% color2 opacity2[,...])`, the same stops as a linear gradient around a centre (`cx% cy%`) with a radius `r%` above 0. Each value is a percent of the element's box, so on an element that is not square the gradient is an ellipse fitted to it. _i.e. radial-gradient(50% 50% 71%,0% #1a47ff 1,100% #b65151 1)_\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n",
             examples=['#FF0000'],
         ),
     ] = None
@@ -2376,7 +2435,7 @@ class Element11(AudioElement, Element1):
 
 class AsyncElement11(AudioElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -2399,13 +2458,13 @@ class TextElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
+            description="**The text color.**\n\n4 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `Radial Gradient`: `radial-gradient(cx% cy% r%,offset1% color1 opacity1,offset2% color2 opacity2[,...])`, the same stops as a linear gradient around a centre (`cx% cy%`) with a radius `r%` above 0. Each value is a percent of the element's box, so on an element that is not square the gradient is an ellipse fitted to it. _i.e. radial-gradient(50% 50% 71%,0% #1a47ff 1,100% #b65151 1)_\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n"
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
+            description="**The background color displayed behind the element.**\n\n4 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `Radial Gradient`: `radial-gradient(cx% cy% r%,offset1% color1 opacity1,offset2% color2 opacity2[,...])`, the same stops as a linear gradient around a centre (`cx% cy%`) with a radius `r%` above 0. Each value is a percent of the element's box, so on an element that is not square the gradient is an ellipse fitted to it. _i.e. radial-gradient(50% 50% 71%,0% #1a47ff 1,100% #b65151 1)_\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n",
             examples=['#FF0000'],
         ),
     ] = None
@@ -2541,13 +2600,13 @@ class ButtonElement(BaseModel):
     color: Annotated[
         str | None,
         Field(
-            description='**The text color.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n'
+            description="**The text color.**\n\n4 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `Radial Gradient`: `radial-gradient(cx% cy% r%,offset1% color1 opacity1,offset2% color2 opacity2[,...])`, the same stops as a linear gradient around a centre (`cx% cy%`) with a radius `r%` above 0. Each value is a percent of the element's box, so on an element that is not square the gradient is an ellipse fitted to it. _i.e. radial-gradient(50% 50% 71%,0% #1a47ff 1,100% #b65151 1)_\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nA gradient is not accepted on a `printer` / `printer_multipage` design: print text is\nsolid, and the request is refused with `400 invalid_payload`.\n"
         ),
     ] = None
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
+            description="**The background color displayed behind the element.**\n\n4 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `Radial Gradient`: `radial-gradient(cx% cy% r%,offset1% color1 opacity1,offset2% color2 opacity2[,...])`, the same stops as a linear gradient around a centre (`cx% cy%`) with a radius `r%` above 0. Each value is a percent of the element's box, so on an element that is not square the gradient is an ellipse fitted to it. _i.e. radial-gradient(50% 50% 71%,0% #1a47ff 1,100% #b65151 1)_\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n",
             examples=['#FF0000'],
         ),
     ] = None
@@ -2756,7 +2815,7 @@ class ImageElement(BaseModel):
 
 class AsyncImageElement(BaseModel):
     """
-    Image element properties available for asynchronous generation, including AI image generation, inpainting, background removal model selection, and AI expand/outpainting.
+    Image element properties available for asynchronous generation, including AI image generation, inpainting, background removal model selection, AI expand/outpainting, and AI upscale.
     """
 
     model_config = ConfigDict(
@@ -2859,6 +2918,13 @@ class AsyncImageElement(BaseModel):
         ),
     ] = None
     expand_properties: ExpandProperties | None = None
+    upscale: Annotated[
+        bool | None,
+        Field(
+            description='Activates AI-powered upscaling: the source image is re-rendered at a higher resolution\nby an AI model, recovering detail instead of interpolating pixels.\n`true` uses `upscale_properties`.\n'
+        ),
+    ] = None
+    upscale_properties: UpscaleProperties | None = None
 
 
 class LogoElement(BaseModel):
@@ -2887,7 +2953,7 @@ class ShapeElement(BaseModel):
     background_color: Annotated[
         str | None,
         Field(
-            description='**The background color displayed behind the element.**\n\n3 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n',
+            description="**The background color displayed behind the element.**\n\n4 filling modes are available:\n- `Hex`: `#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA` (the 8- and 4-digit forms carry alpha). _i.e. #EAEAEA or #FF00FF55_\n- `Linear Gradient`: `linear-gradient(x1% y1% x2% y2%,offset1% color1 opacity1,offset2% color2 opacity2[,...])` with 2 to 8 color stops, each at its own offset. _i.e. linear-gradient(0% 0% 100% 0%,0% #1a47ff 1,100% #b65151 1)_\n  - offset: `0%` to `100%`;\n  - color: `#RRGGBB` or `#RGB`, or `cmyk(C,M,Y,K)` without spaces, and every stop in the same notation. A stop color carries no alpha (`#RRGGBBAA`, `#RGBA` and `cmyka` are refused): transparency is the stop opacity;\n  - opacity: `0` to `1`.\n\n  No space after a comma.\n- `Radial Gradient`: `radial-gradient(cx% cy% r%,offset1% color1 opacity1,offset2% color2 opacity2[,...])`, the same stops as a linear gradient around a centre (`cx% cy%`) with a radius `r%` above 0. Each value is a percent of the element's box, so on an element that is not square the gradient is an ellipse fitted to it. _i.e. radial-gradient(50% 50% 71%,0% #1a47ff 1,100% #b65151 1)_\n- `CMYK` (for print; converted to RGB on other designs): `cmyk(C,M,Y,K)` or `cmyka(C,M,Y,K,A)`, each component an integer 0–100, optionally followed by `%`. _i.e. cmyk(0,100,100,0)_\n\nOn a `printer` / `printer_multipage` design a gradient is accepted only on the\n`background_color` of a shape or button, with `cmyk(C,M,Y,K)`, `#RRGGBB` or `#RGB` stops, all\nopaque; on the format background (`root`) or any other element it is refused with\n`400 invalid_payload`.\n",
             examples=['#FF0000'],
         ),
     ] = None
@@ -3088,7 +3154,7 @@ class DuplicationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-25'],
+            examples=['v2026-10-01'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -3119,7 +3185,7 @@ class GenerationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-09-25'],
+            examples=['v2026-10-01'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -3181,7 +3247,7 @@ class Element10(VideoElement, Element1):
 
 class AsyncElement2(TextElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3191,7 +3257,7 @@ class AsyncElement2(TextElement, AsyncElement1):
 
 class AsyncElement3(AsyncImageElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3201,7 +3267,7 @@ class AsyncElement3(AsyncImageElement, AsyncElement1):
 
 class AsyncElement4(ButtonElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3211,7 +3277,7 @@ class AsyncElement4(ButtonElement, AsyncElement1):
 
 class AsyncElement5(LogoElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3221,7 +3287,7 @@ class AsyncElement5(LogoElement, AsyncElement1):
 
 class AsyncElement6(ShapeElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3231,7 +3297,7 @@ class AsyncElement6(ShapeElement, AsyncElement1):
 
 class AsyncElement7(RatingElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3241,7 +3307,7 @@ class AsyncElement7(RatingElement, AsyncElement1):
 
 class AsyncElement8(IllustrationElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3251,7 +3317,7 @@ class AsyncElement8(IllustrationElement, AsyncElement1):
 
 class AsyncElement9(QRCodeElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
@@ -3261,7 +3327,7 @@ class AsyncElement9(QRCodeElement, AsyncElement1):
 
 class AsyncElement10(VideoElement, AsyncElement1):
     """
-    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting) that are only available for asynchronous generation.
+    Same as `Element`, but its image element also exposes AI generation properties (`text_to_image`, inpainting, background removal model, AI expand/outpainting, AI upscale) that are only available for asynchronous generation.
     """
 
     model_config = ConfigDict(
