@@ -26,7 +26,7 @@ pip install abyssale
 Requires Python 3.10+. Set the environment variable `ABYSSALE_API_KEY` to your Abyssale API key, or
 pass `api_key=` to the client.
 
-This release models API version `v2026-10-01`, readable at runtime as `abyssale.__api_version__`.
+This release models API version `v2026-10-07`, readable at runtime as `abyssale.__api_version__`.
 The API is versioned by release date and keeps one version at a time; the SDK version is
 independent.
 
@@ -36,7 +36,7 @@ Every method below exists on both `Abyssale` and `AsyncAbyssale`, with the same 
 the async ones are coroutines.
 
 - `verify_api_key()` — Verify the API key and return the workspace it belongs to; every failure is a 401
-- `list_designs(project_id=None, type=None)` — List all designs in the workspace, with optional filtering
+- `list_designs(project_id=None, type=None, query=None, name=None, project=None, orientation=None, size=None, format=None, updated_since=None, created_since=None, sort=None, order=None, page=None, per_page=None)` — List the designs in the workspace: search by words, name or project; filter by type, orientation, size, format and dates (`type`, `size`, `format` take a list); sort and page
 - `get_design(design_id, advanced=False)` — Full design spec: formats, elements, variables; `advanced=True` also returns `group` layers
 - `get_design_format(design_id, format_specifier)` — Get details for a specific format within a design, by name or UUID
 - `generate_image(design_id, body)` — Synchronously generate a single image; returns the file URL immediately
@@ -46,9 +46,9 @@ the async ones are coroutines.
 - `wait_for_generation_request(generation_request_id, interval=None, max_interval=None, timeout=None)` — Poll with exponential backoff until complete; raises on timeout, and when the request finalized with no banners at all (partial success resolves — check `result.errors`)
 - `wait_for_duplication_request(duplicate_request_id, ...)` — Poll template duplication until COMPLETED or ERROR
 - `get_file(banner_id)` — Retrieve metadata and CDN download URL for a generated file
-- `list_fonts()` — List all fonts available in the workspace (Google Fonts + custom uploads)
+- `list_fonts(name=None, category=None, weight=None, style=None, page=None, per_page=None)` — List the fonts available in the workspace (Google Fonts + custom uploads), filtered and paged
 - `get_credits()` — Remaining generation and AI credits for the workspace, for the current billing period; the read costs no credits. `available`/`limit` are `None` on an unlimited plan, and `available` counts the recurring allowance only — what a request can spend is `available + extra`
-- `list_projects()` — List all projects in the workspace
+- `list_projects(name=None, page=None, per_page=None)` — List the projects in the workspace, filtered by name and paged
 - `create_project(body)` — Create a new project to organise designs
 - `export_banners(body)` — Asynchronously package a set of banners into a ZIP archive for download
 - `create_dynamic_image_url(design_id, body=None)` — Create a live image URL that renders on-the-fly from query parameters

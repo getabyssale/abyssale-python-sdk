@@ -6,6 +6,8 @@ The two clients differ only in how they *send*, which is the one thing not in th
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import date
 from functools import cache
 from typing import Any, TypeVar, get_args
 from urllib.parse import quote
@@ -38,11 +40,24 @@ def encode_path(template: str, **params: str) -> str:
 
 
 def clean_query(query: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Drop unset filters so they are not sent as empty query parameters."""
+    """Drop unset filters so they are not sent as empty query parameters, and put the rest in the
+    form the API reads.
+
+    A list is sent as ONE comma-separated value (``type=static,animated``): httpx would repeat the
+    param instead, and the API keeps only one of the repeats. A date or datetime is sent as ISO 8601.
+    """
     if not query:
         return None
-    cleaned = {k: v for k, v in query.items() if v is not None}
+    cleaned = {k: _query_value(v) for k, v in query.items() if v is not None}
     return cleaned or None
+
+
+def _query_value(value: Any) -> Any:
+    if isinstance(value, date):  # datetime is a date too
+        return value.isoformat()
+    if isinstance(value, Sequence) and not isinstance(value, str):
+        return ",".join(str(item) for item in value)
+    return value
 
 
 def parse_body(response: Any) -> Any:
