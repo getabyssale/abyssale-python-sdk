@@ -12,12 +12,35 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.4.0 | `v2026-10-01` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.5.0 | `v2026-10-07` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.4.0 | `v2026-10-01` | |
 | 1.3.1 | `v2026-09-25` | |
 | 1.3.0 | `v2026-09-24` | |
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.5.0] — 2026-10-07
+
+_Generated from API version **`v2026-10-07`**, which also brings `v2026-10-02`._
+
+Minor: the three listings gained keyword arguments. Every existing call keeps working, including
+`list_designs(type="static")`: `type` now also takes a list.
+
+### Added
+
+- **Search, filters, sort and paging on `list_designs`** (`v2026-10-07`): `query` (words in any
+  order, in the design or the project name), `name`, `project`, `orientation`, `size`, `format`,
+  `updated_since`, `created_since`, `sort`, `order`, `page` and `per_page`. `type`, `size` and
+  `format` take a string or a list, sent comma-separated as the API expects; the dates take an
+  ISO 8601 string, a `date` or a `datetime`.
+- **Filters and paging on `list_fonts`** (`name`, `category`, `weight`, `style`) **and
+  `list_projects`** (`name`). Both took no argument before.
+- **Models**: `Font.category` (Google fonts), and `leonardo-remove-bg` among the background-removal
+  models (`v2026-10-02`).
+
+The total across pages (the `X-Total-Count` header) is not exposed: the listings still return a
+plain list. When paging, a page shorter than `per_page` is the last one.
 
 ## [1.4.0] — 2026-10-01
 

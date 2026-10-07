@@ -16,7 +16,8 @@ would only mis-coerce. Responses *are* models, generated from the spec's schemas
 from __future__ import annotations
 
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from datetime import date
 from types import TracebackType
 from typing import Any
 
@@ -234,15 +235,64 @@ class Abyssale:
         self,
         *,
         project_id: str | None = None,
-        type: str | None = None,  # noqa: A002
+        type: str | Sequence[str] | None = None,  # noqa: A002
+        query: str | None = None,
+        name: str | None = None,
+        project: str | None = None,
+        orientation: str | None = None,
+        size: str | Sequence[str] | None = None,
+        format: str | Sequence[str] | None = None,  # noqa: A002
+        updated_since: str | date | None = None,
+        created_since: str | date | None = None,
+        sort: str | None = None,
+        order: str | None = None,
+        page: int | None = None,
+        per_page: int | None = None,
     ) -> list[DesignListItem]:
-        """List all designs in the workspace.
+        """List the designs in the workspace — every one by default, ordered by name.
 
-        Optionally filter by ``project_id`` or ``type`` (``static``, ``animated``, ``printer``,
-        ``printer_multipage``).
+        Every filter is optional, and they combine:
+
+        - ``query``: words in any order, each in the design or the project name; ``name`` and
+          ``project``: one exact phrase each; ``project_id``: one project.
+        - ``type``: one or several of ``static``, ``animated``, ``printer``, ``printer_multipage``.
+        - ``orientation`` (``portrait``, ``landscape``, ``square``), ``size`` (``"1080x1920"``, or
+          ``"210x297"`` for an A4 print design) and ``format`` (format names): one of the design's
+          formats must match them all. ``size`` and ``format`` take a list too.
+        - ``updated_since`` / ``created_since``: an ISO 8601 string, a ``date`` or a ``datetime``
+          (a date means midnight UTC, and so does a naive datetime).
+        - ``sort`` (``name``, ``updated``, ``created``) and ``order`` (``asc``, ``desc``).
+        - ``page`` / ``per_page`` turn paging on (25 per page by default, at most 100).
+
+        Example
+        -------
+        ::
+
+            designs = client.list_designs(
+                type=["static", "animated"],
+                orientation="portrait",
+                updated_since="2026-09-28",
+                sort="updated",
+                per_page=25,
+            )
         """
-        query = {"project_id": project_id, "type": type}
-        return validate_list(DesignListItem, self._request("GET", "/designs", query=query))
+        params = {
+            "project_id": project_id,
+            "type": type,
+            "query": query,
+            "name": name,
+            "project": project,
+            "orientation": orientation,
+            "size": size,
+            "format": format,
+            "updated_since": updated_since,
+            "created_since": created_since,
+            "sort": sort,
+            "order": order,
+            "page": page,
+            "per_page": per_page,
+        }
+        return validate_list(DesignListItem, self._request("GET", "/designs", query=params))
 
     def get_design(self, design_id: str, *, advanced: bool = False) -> DesignDetail:
         """Get the full specification of a design: formats, elements and variables.
@@ -351,12 +401,40 @@ class Abyssale:
 
     # ── Fonts ─────────────────────────────────────────────────────────────────
 
-    def list_fonts(self) -> list[Font]:
-        """List all fonts available in the workspace (Google Fonts + custom uploads).
+    def list_fonts(
+        self,
+        *,
+        name: str | None = None,
+        category: str | None = None,
+        weight: int | None = None,
+        style: str | None = None,
+        page: int | None = None,
+        per_page: int | None = None,
+    ) -> list[Font]:
+        """List the fonts available in the workspace (Google Fonts + custom uploads), every one by
+        default.
 
-        Use a font's ``id`` to override the font in a generation request.
+        Use a font's ``id`` to override the font in a generation request. Filter by ``name``
+        (ignores case, accents and spaces; exact names first), ``category`` (``serif``,
+        ``sans-serif``, ``display``, ``handwriting``, ``monospace``; Google fonts only), ``weight``
+        (``100``–``900``, ``700`` is bold) and ``style`` (``normal``, ``italic``), and page with
+        ``page`` / ``per_page``.
+
+        Example
+        -------
+        ::
+
+            fonts = client.list_fonts(category="serif", weight=700, style="italic")
         """
-        return validate_list(Font, self._request("GET", "/fonts"))
+        params = {
+            "name": name,
+            "category": category,
+            "weight": weight,
+            "style": style,
+            "page": page,
+            "per_page": per_page,
+        }
+        return validate_list(Font, self._request("GET", "/fonts", query=params))
 
     # ── Credits ───────────────────────────────────────────────────────────────
 
@@ -383,12 +461,20 @@ class Abyssale:
 
     # ── Projects ──────────────────────────────────────────────────────────────
 
-    def list_projects(self) -> list[ProjectSummary]:
-        """List all projects in the workspace.
+    def list_projects(
+        self,
+        *,
+        name: str | None = None,
+        page: int | None = None,
+        per_page: int | None = None,
+    ) -> list[ProjectSummary]:
+        """List the projects in the workspace, every one by default, ordered by name.
 
-        Only designs belonging to a project are accessible via the API.
+        Only designs belonging to a project are accessible via the API. Filter by ``name`` (one
+        exact phrase) and page with ``page`` / ``per_page``.
         """
-        return validate_list(ProjectSummary, self._request("GET", "/projects"))
+        params = {"name": name, "page": page, "per_page": per_page}
+        return validate_list(ProjectSummary, self._request("GET", "/projects", query=params))
 
     def create_project(self, body: Body) -> Project:
         """Create a project to organise your designs.

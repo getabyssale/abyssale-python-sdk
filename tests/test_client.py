@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from datetime import date, datetime, timezone
 
 import httpx
 import pytest
@@ -105,6 +106,64 @@ class TestRequests:
         client.list_designs(type="static")
         params = route.calls.last.request.url.params
         assert dict(params) == {"type": "static"}
+
+    def test_a_list_filter_is_one_comma_separated_value(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        # The API reads `type=printer,printer_multipage`; repeated, it would keep only one value.
+        route = respx_mock.get(f"{BASE_URL}/designs").mock(return_value=httpx.Response(200, json=[]))
+        client.list_designs(
+            type=["printer", "printer_multipage"], size=("1080x1080", "1200x628"), format=["a5", "facebook-post"]
+        )
+        params = route.calls.last.request.url.params
+        assert params.get_list("type") == ["printer,printer_multipage"]
+        assert params.get_list("size") == ["1080x1080,1200x628"]
+        assert params.get_list("format") == ["a5,facebook-post"]
+
+    def test_design_search_dates_sort_and_paging(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        route = respx_mock.get(f"{BASE_URL}/designs").mock(return_value=httpx.Response(200, json=[]))
+        client.list_designs(
+            query="black friday story",
+            orientation="portrait",
+            updated_since=date(2026, 9, 28),
+            created_since=datetime(2026, 10, 1, 14, 0, tzinfo=timezone.utc),
+            sort="updated",
+            order="desc",
+            page=2,
+            per_page=25,
+        )
+        assert dict(route.calls.last.request.url.params) == {
+            "query": "black friday story",
+            "orientation": "portrait",
+            "updated_since": "2026-09-28",
+            "created_since": "2026-10-01T14:00:00+00:00",
+            "sort": "updated",
+            "order": "desc",
+            "page": "2",
+            "per_page": "25",
+        }
+
+    def test_font_and_project_filters(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        fonts = respx_mock.get(f"{BASE_URL}/fonts").mock(return_value=httpx.Response(200, json=[]))
+        projects = respx_mock.get(f"{BASE_URL}/projects").mock(return_value=httpx.Response(200, json=[]))
+        client.list_fonts()
+        client.list_projects()
+        assert not fonts.calls.last.request.url.params
+        assert not projects.calls.last.request.url.params
+        client.list_fonts(name="Open Sans", category="serif", weight=700, style="italic")
+        client.list_projects(name="summer", per_page=10)
+        assert dict(fonts.calls.last.request.url.params) == {
+            "name": "Open Sans",
+            "category": "serif",
+            "weight": "700",
+            "style": "italic",
+        }
+        assert dict(projects.calls.last.request.url.params) == {"name": "summer", "per_page": "10"}
+
+    async def test_the_async_client_sends_lists_the_same_way(
+        self, async_client: AsyncAbyssale, respx_mock: respx.MockRouter
+    ) -> None:
+        route = respx_mock.get(f"{BASE_URL}/designs").mock(return_value=httpx.Response(200, json=[]))
+        await async_client.list_designs(type=["static", "animated"], orientation="square")
+        assert dict(route.calls.last.request.url.params) == {"type": "static,animated", "orientation": "square"}
 
     def test_path_arguments_are_encoded(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
         # A format specifier can be a human-authored name, spaces and all.

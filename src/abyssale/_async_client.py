@@ -14,7 +14,8 @@ purpose to keep the two files diffable.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from datetime import date
 from types import TracebackType
 from typing import Any
 
@@ -188,11 +189,38 @@ class AsyncAbyssale:
         self,
         *,
         project_id: str | None = None,
-        type: str | None = None,  # noqa: A002
+        type: str | Sequence[str] | None = None,  # noqa: A002
+        query: str | None = None,
+        name: str | None = None,
+        project: str | None = None,
+        orientation: str | None = None,
+        size: str | Sequence[str] | None = None,
+        format: str | Sequence[str] | None = None,  # noqa: A002
+        updated_since: str | date | None = None,
+        created_since: str | date | None = None,
+        sort: str | None = None,
+        order: str | None = None,
+        page: int | None = None,
+        per_page: int | None = None,
     ) -> list[DesignListItem]:
-        """List all designs in the workspace."""
-        query = {"project_id": project_id, "type": type}
-        return validate_list(DesignListItem, await self._request("GET", "/designs", query=query))
+        """List the designs in the workspace. See :meth:`Abyssale.list_designs` for the filters."""
+        params = {
+            "project_id": project_id,
+            "type": type,
+            "query": query,
+            "name": name,
+            "project": project,
+            "orientation": orientation,
+            "size": size,
+            "format": format,
+            "updated_since": updated_since,
+            "created_since": created_since,
+            "sort": sort,
+            "order": order,
+            "page": page,
+            "per_page": per_page,
+        }
+        return validate_list(DesignListItem, await self._request("GET", "/designs", query=params))
 
     async def get_design(self, design_id: str, *, advanced: bool = False) -> DesignDetail:
         """Get the full specification of a design. ``advanced=True`` includes ``group`` layers."""
@@ -239,9 +267,26 @@ class AsyncAbyssale:
 
     # ── Fonts ─────────────────────────────────────────────────────────────────
 
-    async def list_fonts(self) -> list[Font]:
-        """List all fonts available in the workspace."""
-        return validate_list(Font, await self._request("GET", "/fonts"))
+    async def list_fonts(
+        self,
+        *,
+        name: str | None = None,
+        category: str | None = None,
+        weight: int | None = None,
+        style: str | None = None,
+        page: int | None = None,
+        per_page: int | None = None,
+    ) -> list[Font]:
+        """List the fonts available in the workspace. See :meth:`Abyssale.list_fonts` for the filters."""
+        params = {
+            "name": name,
+            "category": category,
+            "weight": weight,
+            "style": style,
+            "page": page,
+            "per_page": per_page,
+        }
+        return validate_list(Font, await self._request("GET", "/fonts", query=params))
 
     # ── Credits ───────────────────────────────────────────────────────────────
 
@@ -268,9 +313,16 @@ class AsyncAbyssale:
 
     # ── Projects ──────────────────────────────────────────────────────────────
 
-    async def list_projects(self) -> list[ProjectSummary]:
-        """List all projects in the workspace."""
-        return validate_list(ProjectSummary, await self._request("GET", "/projects"))
+    async def list_projects(
+        self,
+        *,
+        name: str | None = None,
+        page: int | None = None,
+        per_page: int | None = None,
+    ) -> list[ProjectSummary]:
+        """List the projects in the workspace. See :meth:`Abyssale.list_projects` for the filters."""
+        params = {"name": name, "page": page, "per_page": per_page}
+        return validate_list(ProjectSummary, await self._request("GET", "/projects", query=params))
 
     async def create_project(self, body: Body) -> Project:
         """Create a project to organise your designs."""
