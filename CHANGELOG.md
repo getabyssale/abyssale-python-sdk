@@ -20,6 +20,13 @@ API changed.
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
 
+## Unreleased
+
+_Models regenerated against the current **`v2026-10-07`** spec._ A design import's `textEffect`
+keyframes may carry `textEffectSplit` (`letter`, the default, `word` or `line`), the unit the text
+effect reveals at a time. The keyframe `attr` model is an open map, so no model changed; only its
+documentation did.
+
 ## [1.5.0] — 2026-10-07
 
 _Generated from API version **`v2026-10-07`**, which also brings `v2026-10-02`._
