@@ -12,7 +12,8 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.5.0 | `v2026-10-07` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.6.0 | `v2026-10-19` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.5.0 | `v2026-10-07` | |
 | 1.4.0 | `v2026-10-01` | |
 | 1.3.1 | `v2026-09-25` | |
 | 1.3.0 | `v2026-09-24` | |
@@ -20,12 +21,26 @@ API changed.
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
 
-## Unreleased
+## [1.6.0] — 2026-10-19
 
-_Models regenerated against the current **`v2026-10-07`** spec._ A design import's `textEffect`
-keyframes may carry `textEffectSplit` (`letter`, the default, `word` or `line`), the unit the text
-effect reveals at a time. The keyframe `attr` model is an open map, so no model changed; only its
-documentation did.
+_Generated from API version **`v2026-10-19`**, which also brings `v2026-10-12`._
+
+Minor: the text-to-image model enum gained a member. Nothing was removed or narrowed, so there is
+no upgrade step beyond installing it.
+
+### Added
+
+- **`textEffect` tweens reveal a text per letter, word or line** (`v2026-10-19`): a design
+  import's keyframe `attr` may carry `textEffectSplit` (`letter`, the default, `word` or `line`)
+  and `textEffectTiming` (`in`, the default, `out` or `inOut`, the layout of an effect that plays
+  out). The keyframe `attr` model is an open map, so no model changed; only its documentation did.
+- **`ideogram-4.5`** joins the `text_to_image_properties.model` enum (`v2026-10-12`).
+
+### Changed
+
+- **`inpaint_images` has a maximum per model** (`v2026-10-12`), from 3 to 16 images; the table is
+  in the field's description and the model caps the list at 16. A request with more than the
+  selected model accepts is rejected by the API with a validation error.
 
 ## [1.5.0] — 2026-10-07
 
