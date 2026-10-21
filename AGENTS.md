@@ -34,7 +34,7 @@ pytest
 
 | File | Role |
 |---|---|
-| `src/abyssale/_client.py` | `Abyssale` — the sync client. The 22 endpoint methods and the 2 `wait_for_*` helpers, each a one-liner over `_request`. This is the file to read first. |
+| `src/abyssale/_client.py` | `Abyssale` — the sync client. The 25 endpoint methods and the 2 `wait_for_*` helpers, each a one-liner over `_request`. This is the file to read first. |
 | `src/abyssale/_async_client.py` | `AsyncAbyssale` — a hand-written mirror of the above. |
 | `src/abyssale/_retry.py` | Retry classification, derived from the error contract in the spec. Transport-free. |
 | `src/abyssale/_polling.py` | `PollLoop` — the poll schedule, the transient-failure budget and the deadline. Transport-free. |

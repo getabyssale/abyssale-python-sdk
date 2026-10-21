@@ -40,6 +40,7 @@ from .models import (
     DesignDetail,
     DesignFormatDetail,
     DesignListItem,
+    DesignNameResult,
     DuplicationRequest,
     DuplicationRequestStatus,
     DynamicImageResponse,
@@ -235,6 +236,21 @@ class AsyncAbyssale:
             format_specifier=format_specifier,
         )
         return validate(DesignFormatDetail, await self._request("GET", path))
+
+    async def rename_design(self, design_id: str, body: Body) -> DesignNameResult:
+        """Rename a design."""
+        path = encode_path("/designs/{design_id}/name", design_id=design_id)
+        return validate(DesignNameResult, await self._request("PUT", path, json=body))
+
+    async def move_design(self, design_id: str, body: Body) -> DesignNameResult:
+        """Move a design to another project of the workspace (ids from :meth:`list_projects`)."""
+        path = encode_path("/designs/{design_id}/project", design_id=design_id)
+        return validate(DesignNameResult, await self._request("PUT", path, json=body))
+
+    async def delete_design(self, design_id: str) -> DesignNameResult:
+        """Delete a design. **There is no restore.** Files already generated from it are kept."""
+        path = encode_path("/designs/{design_id}", design_id=design_id)
+        return validate(DesignNameResult, await self._request("DELETE", path))
 
     # ── Asset generation ──────────────────────────────────────────────────────
 

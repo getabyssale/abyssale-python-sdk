@@ -26,7 +26,7 @@ pip install abyssale
 Requires Python 3.10+. Set the environment variable `ABYSSALE_API_KEY` to your Abyssale API key, or
 pass `api_key=` to the client.
 
-This release models API version `v2026-10-19`, readable at runtime as `abyssale.__api_version__`.
+This release models API version `v2026-10-21`, readable at runtime as `abyssale.__api_version__`.
 The API is versioned by release date and keeps one version at a time; the SDK version is
 independent.
 
@@ -39,6 +39,9 @@ the async ones are coroutines.
 - `list_designs(project_id=None, type=None, query=None, name=None, project=None, orientation=None, size=None, format=None, updated_since=None, created_since=None, sort=None, order=None, page=None, per_page=None)` — List the designs in the workspace: search by words, name or project; filter by type, orientation, size, format and dates (`type`, `size`, `format` take a list); sort and page
 - `get_design(design_id, advanced=False)` — Full design spec: formats, elements, variables; `advanced=True` also returns `group` layers
 - `get_design_format(design_id, format_specifier)` — Get details for a specific format within a design, by name or UUID
+- `rename_design(design_id, body)` — Rename a design (`{"name": ...}`, 1 to 100 characters after trimming)
+- `move_design(design_id, body)` — Move a design to another project (`{"project_id": ...}`); resets its approval status
+- `delete_design(design_id)` — Delete a design; no restore, files already generated from it are kept
 - `generate_image(design_id, body)` — Synchronously generate a single image; returns the file URL immediately
 - `generate_multi_format_media(design_id, body)` — Asynchronously generate multiple formats (image, GIF, video, HTML5, PDF) in one call
 - `generate_multi_page_pdf(design_id, body)` — Asynchronously generate a multi-page print-ready PDF from a printer_multipage design
