@@ -42,6 +42,7 @@ from .models import (
     DesignDetail,
     DesignFormatDetail,
     DesignListItem,
+    DesignNameResult,
     DuplicationRequest,
     DuplicationRequestStatus,
     DynamicImageResponse,
@@ -326,6 +327,51 @@ class Abyssale:
             format_specifier=format_specifier,
         )
         return validate(DesignFormatDetail, self._request("GET", path))
+
+    def rename_design(self, design_id: str, body: Body) -> DesignNameResult:
+        """Rename a design.
+
+        The name is trimmed, then must be 1 to 100 characters; names need not be unique. Any design
+        :meth:`list_designs` lists can be renamed; anything else raises ``template_not_found``.
+
+        Example
+        -------
+        ::
+
+            result = client.rename_design(design_id, {"name": "Summer sale"})
+        """
+        path = encode_path("/designs/{design_id}/name", design_id=design_id)
+        return validate(DesignNameResult, self._request("PUT", path, json=body))
+
+    def move_design(self, design_id: str, body: Body) -> DesignNameResult:
+        """Move a design to another project of the workspace (ids from :meth:`list_projects`).
+
+        Moving a design resets its approval status. A destination that is not a project of your
+        workspace raises ``project_not_found``.
+
+        Example
+        -------
+        ::
+
+            result = client.move_design(design_id, {"project_id": project_id})
+        """
+        path = encode_path("/designs/{design_id}/project", design_id=design_id)
+        return validate(DesignNameResult, self._request("PUT", path, json=body))
+
+    def delete_design(self, design_id: str) -> DesignNameResult:
+        """Delete a design. **There is no restore.** Files already generated from it are kept.
+
+        Any design :meth:`list_designs` lists can be deleted; anything else raises
+        ``template_not_found``.
+
+        Example
+        -------
+        ::
+
+            result = client.delete_design(design_id)
+        """
+        path = encode_path("/designs/{design_id}", design_id=design_id)
+        return validate(DesignNameResult, self._request("DELETE", path))
 
     # ── Asset generation ──────────────────────────────────────────────────────
 

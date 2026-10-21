@@ -39,6 +39,9 @@ SPEC_OPERATION_IDS = {
     "listDesigns",
     "getDesign",
     "getDesignFormat",
+    "renameDesign",
+    "moveDesign",
+    "deleteDesign",
     "generateImage",
     "generateMultiFormatMedia",
     "generateMultiPagePdf",
@@ -78,13 +81,16 @@ def test_every_method_is_a_spec_operation() -> None:
     assert SYNC_METHODS - HELPERS == {snake(op) for op in SPEC_OPERATION_IDS}
 
 
-def test_the_surface_is_the_twenty_two_endpoints_plus_two_helpers() -> None:
+def test_the_surface_is_the_twenty_five_endpoints_plus_two_helpers() -> None:
     # Pinned so that adding an endpoint is a deliberate act, in both clients and in the docs.
     assert SYNC_METHODS == {
         "verify_api_key",
         "list_designs",
         "get_design",
         "get_design_format",
+        "rename_design",
+        "move_design",
+        "delete_design",
         "generate_image",
         "generate_multi_format_media",
         "generate_multi_page_pdf",

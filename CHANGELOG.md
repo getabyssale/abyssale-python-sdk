@@ -12,7 +12,8 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.6.0 | `v2026-10-19` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.7.0 | `v2026-10-21` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.6.0 | `v2026-10-19` | |
 | 1.5.0 | `v2026-10-07` | |
 | 1.4.0 | `v2026-10-01` | |
 | 1.3.1 | `v2026-09-25` | |
@@ -20,6 +21,29 @@ API changed.
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.7.0] — 2026-10-21
+
+_Generated from API version **`v2026-10-21`**, which also brings `v2026-10-20`._
+
+Minor: three methods were added and an enum gained members. Nothing was removed or narrowed, so
+there is no upgrade step beyond installing it.
+
+### Added
+
+- **`rename_design(design_id, {"name": ...})`**, **`move_design(design_id, {"project_id": ...})`**
+  and **`delete_design(design_id)`** (`v2026-10-21`): `PUT /designs/{designId}/name`,
+  `PUT /designs/{designId}/project` and `DELETE /designs/{designId}`, on both clients. All three
+  return a `DesignNameResult` (`id`, `name`), exported from `abyssale.models`. Moving a design
+  resets its approval status; deleting has no restore. A design `list_designs` does not list
+  raises `AbyssaleAPIError` with `id == "template_not_found"`; a destination that is not a project
+  of the workspace, `"project_not_found"`.
+- **Border on image layers** (`v2026-10-21`): `stroke_width` (0 to 60) and `stroke_color` on an
+  image element override. The frame is drawn outside the image box and follows its mask. Bodies
+  are plain dicts, so nothing to change: the keys are documented in the spec.
+- **Justified text** (`v2026-10-20`): a text element's `alignment` accepts `justify`,
+  `justify-left`, `justify-center` and `justify-right`, alone or after a vertical half
+  (`"middle justify-center"`). Text layers only: a button label keeps `left`, `center`, `right`.
 
 ## [1.6.0] — 2026-10-19
 
