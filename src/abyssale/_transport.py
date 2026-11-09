@@ -16,6 +16,7 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from ._errors import AbyssaleAPIError, error_from_response
 from ._retry import retry_after_seconds
+from .models import AiModelCatalog, AiModelListing
 
 USER_AGENT = "abyssale-python"
 
@@ -168,3 +169,13 @@ def validate_list(model: type[M], data: Any) -> list[M]:
     if not isinstance(data, list):
         raise AbyssaleAPIError(200, f"expected a list, got {type(data).__name__}", body=data)
     return [validate(model, item) for item in data]
+
+
+def parse_ai_models(data: Any) -> AiModelListing | AiModelCatalog:
+    """Parse ``GET /ai-models``: one listing with ``operation``, every action (``operations``) without.
+
+    The spec answers a ``oneOf``, and the body says which — so the shape is read, not the request.
+    """
+    if isinstance(data, dict) and "operations" in data:
+        return validate(AiModelCatalog, data)
+    return validate(AiModelListing, data)

@@ -17,9 +17,17 @@ Everything else in ``abyssale._generated`` is private. Import from ``abyssale`` 
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 from ._generated import (
+    AiModelListing,
+    AiModelParam,
+    AssetJob,
+    AssetJobCredits,
+    AssetJobOutput,
+    AssetJobQueued,
     Banner,
     CreditBlock,
     CreditsBalance,
@@ -51,6 +59,7 @@ from ._generated import (
     WorkspaceTemplate,
     WorkspaceTemplateCategory,
 )
+from ._generated import Model as AiModel
 from ._generated import Warning as ResponseWarning
 
 
@@ -129,8 +138,21 @@ class ExportAccepted(_Response):
     version: str | None = None
 
 
+#: The AI actions :meth:`Abyssale.list_ai_models` takes as ``operation``.
+AiOperation = Literal["images_remove_background", "images_text_to_image", "images_upscale"]
+
+
+class AiModelCatalog(_Response):
+    """Every AI action's models — :meth:`Abyssale.list_ai_models` called without ``operation``."""
+
+    operations: list[AiModelListing] = Field(description="One listing per AI action of the public API.")
+    version: str | None = None
+
+
 __all__ = [
     # Hand-written response models
+    "AiModelCatalog",
+    "AiOperation",
     "AuthResult",
     "DesignDetail",
     "DesignFormatDetail",
@@ -139,6 +161,13 @@ __all__ = [
     "GenerationRequestAccepted",
     "Project",
     # Generated component schemas
+    "AiModel",
+    "AiModelListing",
+    "AiModelParam",
+    "AssetJob",
+    "AssetJobCredits",
+    "AssetJobOutput",
+    "AssetJobQueued",
     "Banner",
     "Design",
     "DesignAnimation",

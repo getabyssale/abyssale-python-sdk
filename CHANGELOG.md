@@ -12,7 +12,8 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.8.0 | `v2026-11-09` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.9.0 | `v2026-11-09` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.8.0 | `v2026-11-09` | |
 | 1.7.0 | `v2026-10-21` | |
 | 1.6.0 | `v2026-10-19` | |
 | 1.5.0 | `v2026-10-07` | |
@@ -22,6 +23,35 @@ API changed.
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.9.0] — 2026-11-09
+
+_Generated from API version **`v2026-11-09`**, which gained the AI asset-job endpoints without a
+version bump._
+
+Minor: five methods, a polling helper and their models were added. Nothing was removed or narrowed,
+so there is no upgrade step beyond installing it.
+
+### Added
+
+- **AI asset jobs.** `remove_background(body)`, `text_to_image(body)` and `upscale(body)`
+  (`POST /images/remove-background`, `/images/text-to-image`, `/images/upscale`) start a job and
+  return an `AssetJobQueued` (`job_id`) at once. Each spends AI credits; a workspace runs at most 5
+  jobs at a time (`too_many_asset_jobs`, 429).
+- **`get_asset_job(job_id)`** (`GET /asset-jobs/{jobId}`) reads a job: `PENDING` → `PROCESSING` →
+  `COMPLETED` with `outputs` (signed URLs, valid 7 days) or `FAILED` with `error.code`.
+- **`wait_for_asset_job(job_id, ...)`** polls a job until it ends: it returns a `COMPLETED` job and
+  raises `AbyssalePollingError` on a `FAILED` one, naming `error.code` (the job is on
+  `__cause__.args[0]`).
+- **`list_ai_models(operation=None)`** (`GET /ai-models`) lists the models the workspace can use
+  per action, with the default and each model's `aspect_ratios`, `qualities`, `upscale_factors` and
+  `max_reference_images`. Without `operation` it returns an `AiModelCatalog` (`operations`); with
+  one, an `AiModelListing` — the overloads type both.
+- Models `AssetJob`, `AssetJobQueued`, `AssetJobOutput`, `AssetJobCredits`, `AiModelListing`,
+  `AiModel`, `AiModelParam`, the hand-written `AiModelCatalog`, and the `AiOperation` literal.
+- The `ASSET_JOB_FINALIZED` webhook, sent to an action's `callback_url`, verifies with
+  `abyssale.webhooks.verify_webhook_signature` like every other delivery — no change there.
+- Example `examples/asset_jobs.py`.
 
 ## [1.8.0] — 2026-11-09
 
