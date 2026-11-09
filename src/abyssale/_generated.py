@@ -149,7 +149,7 @@ class Problem(BaseModel):
     code: Annotated[
         str,
         Field(
-            description="Stable, machine-readable code. Agents should branch on `code`, not on `message`.\n\nPayload/validation codes: `missing_required`, `unknown_field`, `wrong_type`,\n`out_of_range`, `unknown_enum_value`, `unknown_format_key`, `duplicate_layer_name`,\n`duplicate_format_name`, `reserved_format_name`, `project_not_found` (**400**),\n`conditional_dependency_missing`, `invalid_payload`, `unsupported_for_type`,\n`unknown_font`, `unreachable_src`, `mutually_exclusive` (two fields that cannot be\ncombined were both supplied).\nUpload/lifecycle codes: `missing_assets`, `template_import_already_processed`,\n`not_found` (**404** — the import does not exist for this company).\nExport code: `not_round_trippable`.\nTransport codes: `invalid_query_param` (an unparseable query-parameter value; `path`\nis the parameter name), `internal_error` (an unhandled server-side error, returned in\nthis same envelope with a 500 status).\nBuild-phase failure codes (surfaced in the status response's `error`):\n`text_fit_failed`, `image_processing_failed` (genuine image failures only),\n`media_processing_failed` (a video/audio container could not be resolved or\nprocessed), `invalid_asset` (an asset arrived but could not be decoded — truncated or\ncorrupt), `font_resolution_failed`, `import_failed` (fallback for a processing failure\nwith no more specific code).\n",
+            description="Stable, machine-readable code. Agents should branch on `code`, not on `message`.\n\nPayload/validation codes: `missing_required`, `unknown_field`, `wrong_type`,\n`out_of_range`, `unknown_enum_value`, `unknown_format_key`, `duplicate_layer_name`,\n`duplicate_format_name`, `reserved_format_name`, `project_not_found` (**400**),\n`conditional_dependency_missing`, `invalid_payload`, `unsupported_for_type`,\n`unknown_font`, `unknown_illustration` (an `illustration_file` that is not in its\n`illustration_type` library), `unreachable_src`, `mutually_exclusive` (two fields that cannot be\ncombined were both supplied).\nUpload/lifecycle codes: `missing_assets`, `template_import_already_processed`,\n`not_found` (**404** — the import does not exist for this company).\nExport code: `not_round_trippable`.\nTransport codes: `invalid_query_param` (an unparseable query-parameter value; `path`\nis the parameter name), `internal_error` (an unhandled server-side error, returned in\nthis same envelope with a 500 status).\nBuild-phase failure codes (surfaced in the status response's `error`):\n`text_fit_failed`, `image_processing_failed` (genuine image failures only),\n`media_processing_failed` (a video/audio container could not be resolved or\nprocessed), `invalid_asset` (an asset arrived but could not be decoded — truncated or\ncorrupt), `font_resolution_failed`, `import_failed` (fallback for a processing failure\nwith no more specific code).\n",
             examples=['out_of_range'],
         ),
     ]
@@ -391,7 +391,7 @@ class Design(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-10-21'],
+            examples=['v2026-11-09'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1259,16 +1259,20 @@ class SharedElementProperties(BaseModel):
     shadow_color: Annotated[
         str | None,
         Field(
-            description='Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or `cmyk(...)` / `cmyka(...)`; no gradient. On a `button` this is the shadow of the **button box**; its label has its own, `text_shadow_color`.'
+            description="Hex (`#RRGGBB`, `#RRGGBBAA`, `#RGB` or `#RGBA`) or `cmyk(...)` / `cmyka(...)`; no gradient. On a `button` this is the shadow of the **button box**; its label has its own, `text_shadow_color`. On `printer` / `printer_multipage` designs only image, shape and logo shadows are printed, multiplied with what lies underneath, and the alpha is the shadow's opacity: `cmyka(0,0,0,100,50)` is a 50% black shadow."
         ),
     ] = None
     shadow_blur: Annotated[
-        float | None, Field(description='Blur in pixels', ge=0.0)
+        float | None,
+        Field(
+            description="Blur in pixels; on `printer` / `printer_multipage` designs, in the design's unit (mm or in)",
+            ge=0.0,
+        ),
     ] = None
     shadow_offset_x: Annotated[
         float | None,
         Field(
-            description='Horizontal offset in pixels (can be negative)',
+            description="Horizontal offset in pixels (can be negative); on `printer` / `printer_multipage` designs, in the design's unit (mm or in)",
             ge=-200.0,
             le=200.0,
         ),
@@ -1276,7 +1280,7 @@ class SharedElementProperties(BaseModel):
     shadow_offset_y: Annotated[
         float | None,
         Field(
-            description='Vertical offset in pixels (can be negative)',
+            description="Vertical offset in pixels (can be negative); on `printer` / `printer_multipage` designs, in the design's unit (mm or in)",
             ge=-200.0,
             le=200.0,
         ),
@@ -1752,6 +1756,8 @@ class Model5(Enum):
     gpt_image_2_5_flare = 'gpt-image-2.5-flare'
     seedream_5_pro = 'seedream-5-pro'
     ideogram_4_5 = 'ideogram-4.5'
+    flux_3 = 'flux-3'
+    fibo_2 = 'fibo-2'
 
 
 class TextToImageProperties(BaseModel):
@@ -1792,7 +1798,7 @@ class TextToImageProperties(BaseModel):
     inpaint_images: Annotated[
         list[AnyUrl] | None,
         Field(
-            description='URL(s) of the image(s) to edit. When provided, switches generation to inpainting mode\ninstead of pure text-to-image. The maximum number of images depends on the selected\n`model`; a request with more is rejected with a validation error.\n\n| Model | Max images |\n|---|---|\n| `gpt-image-2` | 16 |\n| `gpt-image-2.5-flare` | 16 |\n| `gpt-image-2.5-sunburst` | 16 |\n| `gemini-3-pro` | 14 |\n| `gemini-3.1-flash` | 14 |\n| `nano-banana-2` | 14 |\n| `nano-banana-pro` | 14 |\n| `gpt-image-1.5` | 10 |\n| `flux-2-pro` | 8 |\n| `kling-image-o3` | 7 |\n| `seedream-4.5` | 7 |\n| `seedream-5-pro` | 7 |\n| `qwen-2511` | 6 |\n| `ideogram-4.5` | 5 |\n| `flux-2-klein-9b` | 4 |\n| `wan-2.7` | 4 |\n| `gemini-2.5-flash` | 3 |\n| `grok-imagine` | 3 |\n| `nano-banana` | 3 |\n',
+            description='URL(s) of the image(s) to edit. When provided, switches generation to inpainting mode\ninstead of pure text-to-image. The maximum number of images depends on the selected\n`model`; a request with more is rejected with a validation error.\n\n| Model | Max images |\n|---|---|\n| `gpt-image-2` | 16 |\n| `gpt-image-2.5-flare` | 16 |\n| `gpt-image-2.5-sunburst` | 16 |\n| `gemini-3-pro` | 14 |\n| `gemini-3.1-flash` | 14 |\n| `nano-banana-2` | 14 |\n| `nano-banana-pro` | 14 |\n| `gpt-image-1.5` | 10 |\n| `flux-3` | 10 |\n| `flux-2-pro` | 8 |\n| `kling-image-o3` | 7 |\n| `seedream-4.5` | 7 |\n| `seedream-5-pro` | 7 |\n| `qwen-2511` | 6 |\n| `ideogram-4.5` | 5 |\n| `fibo-2` | 4 |\n| `flux-2-klein-9b` | 4 |\n| `wan-2.7` | 4 |\n| `gemini-2.5-flash` | 3 |\n| `grok-imagine` | 3 |\n| `nano-banana` | 3 |\n',
             max_length=16,
         ),
     ] = None
@@ -1853,7 +1859,7 @@ class DuplicationRequest(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-10-21'],
+            examples=['v2026-11-09'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -1923,7 +1929,7 @@ class DesignNameResult(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-10-21'],
+            examples=['v2026-11-09'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2020,7 +2026,7 @@ class DynamicImageResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-10-21'],
+            examples=['v2026-11-09'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -2351,7 +2357,7 @@ class ErrorResponse(BaseModel):
     id: Annotated[
         str,
         Field(
-            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unreachable_src`, `invalid_query_param`, `invalid_filetype`,\n`invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These two are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`.\n\n**Retrying never helps — something has to change first.** The plan or the credit\nbalance: `feature_not_in_plan`, `api_access_denied`. Note that `rate_limit_exceeded`\nlands here too when it means "not enough credits"; the message is what tells the two\napart, which is why both entries name it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`,\n`previous_secret_still_active`, `design_in_open_product`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
+            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unknown_illustration`, `unreachable_src`, `invalid_query_param`,\n`invalid_filetype`, `invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These two are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`.\n\n**Retrying never helps — something has to change first.** The plan or the credit\nbalance: `feature_not_in_plan`, `api_access_denied`. Note that `rate_limit_exceeded`\nlands here too when it means "not enough credits"; the message is what tells the two\napart, which is why both entries name it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`,\n`previous_secret_still_active`, `design_in_open_product`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
         ),
     ]
     errors: Annotated[
@@ -2365,7 +2371,7 @@ class ErrorResponse(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-10-21'],
+            examples=['v2026-11-09'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -3254,7 +3260,7 @@ class DuplicationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-10-21'],
+            examples=['v2026-11-09'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
@@ -3285,7 +3291,7 @@ class GenerationRequestStatus(BaseModel):
         str | None,
         Field(
             description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
-            examples=['v2026-10-21'],
+            examples=['v2026-11-09'],
             pattern='^v\\d{4}-\\d{2}-\\d{2}$',
         ),
     ] = None
