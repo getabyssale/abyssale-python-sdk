@@ -12,7 +12,8 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.7.0 | `v2026-10-21` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.8.0 | `v2026-11-09` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.7.0 | `v2026-10-21` | |
 | 1.6.0 | `v2026-10-19` | |
 | 1.5.0 | `v2026-10-07` | |
 | 1.4.0 | `v2026-10-01` | |
@@ -21,6 +22,23 @@ API changed.
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.8.0] — 2026-11-09
+
+_Generated from API version **`v2026-11-09`**, which also brings `v2026-10-29`._
+
+Minor: an enum gained members. Nothing was removed or narrowed, so there is no upgrade step beyond
+installing it.
+
+### Added
+
+- **`flux-3`** and **`fibo-2`** join the `text_to_image_properties.model` enum (`v2026-10-29`).
+  `flux-3` accepts up to 10 `inpaint_images`, `fibo-2` up to 4.
+- **Shadows on print designs** (`v2026-11-09`): on `printer` / `printer_multipage` designs,
+  `shadow_blur`, `shadow_offset_x` and `shadow_offset_y` are in the design's unit (mm or in), the
+  alpha of `shadow_color` is the shadow's opacity, and image, shape and logo shadows are printed
+  multiplied with what lies underneath. Request bodies are plain dicts, so nothing changes in how
+  they are sent; only the model documentation did.
 
 ## [1.7.0] — 2026-10-21
 
