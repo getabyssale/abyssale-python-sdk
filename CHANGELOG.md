@@ -12,7 +12,8 @@ API changed.
 
 | SDK | API version | |
 |---|---|---|
-| 1.9.0 | `v2026-11-09` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.10.0 | `v2026-11-10` | [spec](https://developers.abyssale.com/api.yaml) |
+| 1.9.0 | `v2026-11-09` | |
 | 1.8.0 | `v2026-11-09` | |
 | 1.7.0 | `v2026-10-21` | |
 | 1.6.0 | `v2026-10-19` | |
@@ -23,6 +24,23 @@ API changed.
 | 1.2.0 | `v2026-09-02` | |
 | 1.1.0 | `v2026-08-21` | |
 | 1.0.0 | `v2026-08-20` | |
+
+## [1.10.0] — 2026-11-10
+
+_Generated from API version **`v2026-11-10`**._
+
+Minor: the generation bodies gained an optional field. Nothing was removed or narrowed, so there is
+no upgrade step beyond installing it.
+
+### Added
+
+- **`file_name`** (`v2026-11-10`) on `generate_image`, `generate_multi_format_media` and
+  `generate_multi_page_pdf`: a top-level key next to `elements` that names the generated file,
+  returned as `file.filename`, in place of the naming set in the design settings. 1–255
+  characters, with the same `{properties}` as the design naming, such as `{format_name}`. On a
+  multi-page PDF, format properties take the first page's values. It is a label, not a key:
+  the formats of one request share it unless it holds `{format_name}`, and an export suffixes
+  repeated names with `-1`, `-2`…. Request bodies are plain dicts, so pass it like any other key.
 
 ## [1.9.0] — 2026-11-09
 

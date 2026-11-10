@@ -26,7 +26,7 @@ pip install abyssale
 Requires Python 3.10+. Set the environment variable `ABYSSALE_API_KEY` to your Abyssale API key, or
 pass `api_key=` to the client.
 
-This release models API version `v2026-11-09`, readable at runtime as `abyssale.__api_version__`.
+This release models API version `v2026-11-10`, readable at runtime as `abyssale.__api_version__`.
 The API is versioned by release date and keeps one version at a time; the SDK version is
 independent.
 
@@ -45,6 +45,8 @@ the async ones are coroutines.
 - `generate_image(design_id, body)` — Synchronously generate a single image; returns the file URL immediately
 - `generate_multi_format_media(design_id, body)` — Asynchronously generate multiple formats (image, GIF, video, HTML5, PDF) in one call
 - `generate_multi_page_pdf(design_id, body)` — Asynchronously generate a multi-page print-ready PDF from a printer_multipage design
+
+All three bodies take an optional top-level `file_name` (1–255 characters, next to `elements`) that names the generated file, returned as `file.filename`, in place of the design's naming; it accepts the same `{properties}`, such as `{format_name}`. It is a label, not a key: formats of one request share it unless it holds `{format_name}`, and an export suffixes repeated names with `-1`, `-2`.
 - `get_generation_request(generation_request_id)` — Poll the status of an async generation request once
 - `wait_for_generation_request(generation_request_id, interval=None, max_interval=None, timeout=None)` — Poll with exponential backoff until complete; raises on timeout, and when the request finalized with no banners at all (partial success resolves — check `result.errors`)
 - `wait_for_duplication_request(duplicate_request_id, ...)` — Poll template duplication until COMPLETED or ERROR

@@ -398,7 +398,8 @@ class Abyssale:
     def generate_image(self, design_id: str, body: Body) -> Banner:
         """Synchronously generate a single image and get the result immediately.
 
-        Best for single-asset workflows where you need the URL inline.
+        Best for single-asset workflows where you need the URL inline. ``file_name``, next to
+        ``elements``, names the generated file (``file.filename``) in place of the design's naming.
 
         Example
         -------
@@ -416,7 +417,8 @@ class Abyssale:
         """Asynchronously generate one or more formats (image, GIF, video, HTML5, PDF).
 
         Returns a ``generation_request_id`` to poll with :meth:`wait_for_generation_request`, or
-        provide a ``callback_url`` to receive a webhook when it completes.
+        provide a ``callback_url`` to receive a webhook when it completes. ``file_name`` names the
+        generated files; every format shares it unless it holds ``{format_name}``.
 
         Example
         -------
@@ -425,6 +427,7 @@ class Abyssale:
             accepted = client.generate_multi_format_media(design_id, {
                 "elements": {"title": {"payload": "Summer Sale"}},
                 "template_format_names": ["facebook-feed", "instagram-post"],
+                "file_name": "summer-sale-{format_name}",
                 "callback_url": "https://your-webhook.com/abyssale",
             })
         """
@@ -434,7 +437,8 @@ class Abyssale:
     def generate_multi_page_pdf(self, design_id: str, body: Body) -> GenerationRequestAccepted:
         """Asynchronously generate a multi-page print-ready PDF from a ``printer_multipage`` design.
 
-        Each key in ``pages`` defines the element overrides for that page.
+        Each key in ``pages`` defines the element overrides for that page. ``file_name`` names the
+        one PDF; format properties such as ``{format_name}`` take the first page's values.
 
         Example
         -------
