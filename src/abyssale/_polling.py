@@ -1,8 +1,9 @@
 """The polling loop, minus the sleeping.
 
-Drives the two status operations the spec documents as polling endpoints — ``getGenerationRequest``
-and ``getDuplicationRequest`` — whose responses carry the terminal condition (``is_finalized``, and
-``status`` reaching ``COMPLETED``/``ERROR``).
+Drives the three status operations the spec documents as polling endpoints — ``getGenerationRequest``,
+``getDuplicationRequest`` and ``getAssetJob`` — whose responses carry the terminal condition
+(``is_finalized``; ``status`` reaching ``COMPLETED``/``ERROR``; ``status`` reaching
+``COMPLETED``/``FAILED``).
 
 Everything here is transport-free so the sync and async ``wait_for_*`` helpers share one
 implementation of the schedule, the transient-failure budget and the deadline; only the sleep
@@ -190,4 +191,36 @@ def check_generation_result(result: T) -> T:
     )
     failure = AbyssalePollingError(f"the generation produced no banners — {reasons}")
     failure.__cause__ = AbyssaleError(result)
+    raise failure
+
+
+#: The statuses an asset job never leaves.
+ASSET_JOB_FINAL_STATUSES = ("COMPLETED", "FAILED")
+
+
+def asset_job_status(job: object) -> str:
+    """The job's status as a plain string, whether it parsed into the generated enum or not."""
+    status = getattr(job, "status", None)
+    return str(getattr(status, "value", status))
+
+
+def check_asset_job_result(job: T) -> T:
+    """Raise when an asset job ended ``FAILED``; return it when it ended ``COMPLETED``.
+
+    The message names the job's ``error.code`` and ``error.message``. ``id``/``body`` stay reserved
+    for an actual API error body, which this is not — the poll itself answered 200. The failed job
+    is on ``__cause__.args[0]``, like :func:`check_generation_result`.
+    """
+    if asset_job_status(job) != "FAILED":
+        return job
+    error = getattr(job, "error", None)
+    # A model normally, but a plain dict if that part of the body failed validation (see
+    # `_transport.validate`, which degrades field by field rather than fail a 200).
+    if isinstance(error, dict):
+        code, message = error.get("code"), error.get("message")
+    else:
+        code, message = getattr(error, "code", None), getattr(error, "message", None)
+    reason = f"{code}: {message}" if code or message else "no reason given"
+    failure = AbyssalePollingError(f"the asset job failed — {reason}")
+    failure.__cause__ = AbyssaleError(job)
     raise failure

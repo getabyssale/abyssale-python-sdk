@@ -17,7 +17,7 @@ import asyncio
 from collections.abc import Mapping, Sequence
 from datetime import date
 from types import TracebackType
-from typing import Any
+from typing import Any, overload
 
 import httpx
 
@@ -29,11 +29,31 @@ from ._config import (
     resolve_timeout,
 )
 from ._errors import AbyssaleConnectionError, AbyssaleError
-from ._polling import PollLoop, check_generation_result, resolve_poll_options
+from ._polling import (
+    ASSET_JOB_FINAL_STATUSES,
+    PollLoop,
+    asset_job_status,
+    check_asset_job_result,
+    check_generation_result,
+    resolve_poll_options,
+)
 from ._retry import retry_schedule
-from ._transport import clean_query, default_headers, encode_path, raise_for_status, validate, validate_list
+from ._transport import (
+    clean_query,
+    default_headers,
+    encode_path,
+    parse_ai_models,
+    raise_for_status,
+    validate,
+    validate_list,
+)
 from ._version import __version__
 from .models import (
+    AiModelCatalog,
+    AiModelListing,
+    AiOperation,
+    AssetJob,
+    AssetJobQueued,
     AuthResult,
     Banner,
     CreditsBalance,
@@ -357,6 +377,35 @@ class AsyncAbyssale:
         path = encode_path("/designs/{design_id}/dynamic-image-url", design_id=design_id)
         return validate(DynamicImageResponse, await self._request("POST", path, json=body or {}))
 
+    # ── AI asset jobs ─────────────────────────────────────────────────────────
+
+    async def remove_background(self, body: Body) -> AssetJobQueued:
+        """Remove an image's background, with an AI model. Spends AI credits."""
+        return validate(AssetJobQueued, await self._request("POST", "/images/remove-background", json=body))
+
+    async def text_to_image(self, body: Body) -> AssetJobQueued:
+        """Generate an image from a prompt, with an AI model. Spends AI credits."""
+        return validate(AssetJobQueued, await self._request("POST", "/images/text-to-image", json=body))
+
+    async def upscale(self, body: Body) -> AssetJobQueued:
+        """Upscale an image, with an AI model. Spends AI credits, priced on the output size."""
+        return validate(AssetJobQueued, await self._request("POST", "/images/upscale", json=body))
+
+    async def get_asset_job(self, job_id: str) -> AssetJob:
+        """Read an asset job once: ``PENDING`` → ``PROCESSING`` → ``COMPLETED`` or ``FAILED``."""
+        return validate(AssetJob, await self._request("GET", encode_path("/asset-jobs/{job_id}", job_id=job_id)))
+
+    @overload
+    async def list_ai_models(self, *, operation: None = None) -> AiModelCatalog: ...
+
+    @overload
+    async def list_ai_models(self, *, operation: AiOperation) -> AiModelListing: ...
+
+    async def list_ai_models(self, *, operation: str | None = None) -> AiModelListing | AiModelCatalog:
+        """List the AI models the workspace can use — every action without ``operation``, one with it."""
+        data = await self._request("GET", "/ai-models", query={"operation": operation})
+        return parse_ai_models(data)
+
     # ── Workspace templates ───────────────────────────────────────────────────
 
     async def list_workspace_templates(
@@ -427,4 +476,25 @@ class AsyncAbyssale:
                 loop.succeeded()
                 if str(getattr(data.status, "value", data.status)) in ("COMPLETED", "ERROR"):
                     return data
+            await asyncio.sleep(loop.next_wait())
+
+    async def wait_for_asset_job(
+        self,
+        job_id: str,
+        *,
+        interval: float | None = None,
+        max_interval: float | None = None,
+        timeout: float | None = None,
+    ) -> AssetJob:
+        """Wait for an AI asset job to end. Returns it ``COMPLETED``; raises when it ``FAILED``."""
+        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout), self.max_retry_wait)
+        while True:
+            try:
+                data = await self.get_asset_job(job_id)
+            except AbyssaleError as err:
+                loop.absorb(err)
+            else:
+                loop.succeeded()
+                if asset_job_status(data) in ASSET_JOB_FINAL_STATUSES:
+                    return check_asset_job_result(data)
             await asyncio.sleep(loop.next_wait())

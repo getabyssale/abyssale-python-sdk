@@ -64,8 +64,8 @@ except AbyssaleAPIError as err:
 
 ## What you get
 
-- **22 methods, sync and async**, one per API operation, named after its `operationId` snake_cased,
-  plus two `wait_for_*` polling helpers —
+- **30 methods, sync and async**, one per API operation, named after its `operationId` snake_cased,
+  plus three `wait_for_*` polling helpers —
   [every method](https://developers.abyssale.com/sdks/python#every-method)
 - **Typed responses, permissive request bodies** — responses are pydantic models that never fail a
   `200`, request bodies pass through untouched —

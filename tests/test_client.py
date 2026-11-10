@@ -9,7 +9,7 @@ import httpx
 import pytest
 import respx
 
-from abyssale import Abyssale, AsyncAbyssale
+from abyssale import Abyssale, AbyssaleAPIError, AiModelCatalog, AiModelListing, AssetJob, AsyncAbyssale
 from abyssale._config import (
     DEFAULT_BASE_URL,
     DEFAULT_MAX_RETRIES,
@@ -343,3 +343,114 @@ class TestAsyncClient:
         )
         assert await async_client.list_fonts() == []
         assert route.call_count == 2
+
+
+JOB_ID = "8f0c2a4e-4869-11f0-96f2-0a00d9eb8f78"
+QUEUED = {"job_id": JOB_ID, "status": "PENDING", "version": "v2026-11-09"}
+
+
+def asset_job(status: str, **extra: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "job_id": JOB_ID,
+        "operation": "images_upscale",
+        "status": status,
+        "outputs": [],
+        "credits": {"generation_credits": 0, "ai_credits": 0},
+        "error": None,
+        "created_at": "2026-11-09T10:00:00Z",
+        "finalized_at": None,
+    }
+    body.update(extra)
+    return body
+
+
+class TestAssetJobs:
+    @pytest.mark.parametrize(
+        ("method", "path", "body"),
+        [
+            ("remove_background", "/images/remove-background", {"image_url": "https://e.com/a.jpg", "crop": True}),
+            ("text_to_image", "/images/text-to-image", {"prompt": "a red fox in snow", "aspect_ratio": "16:9"}),
+            ("upscale", "/images/upscale", {"image_url": "https://e.com/a.jpg", "upscale_factor": 2}),
+        ],
+    )
+    def test_an_action_posts_its_body_and_returns_the_receipt(
+        self, client: Abyssale, respx_mock: respx.MockRouter, method: str, path: str, body: dict[str, object]
+    ) -> None:
+        route = respx_mock.post(f"{BASE_URL}{path}").mock(return_value=httpx.Response(202, json=QUEUED))
+        queued = getattr(client, method)(body)
+        assert route.call_count == 1
+        assert httpx.Request("POST", "/", json=body).content == route.calls.last.request.content
+        assert str(queued.job_id) == JOB_ID
+        assert str(getattr(queued.status, "value", queued.status)) == "PENDING"
+
+    def test_an_action_refused_for_credits_raises_with_the_id(
+        self, client: Abyssale, respx_mock: respx.MockRouter
+    ) -> None:
+        respx_mock.post(f"{BASE_URL}/images/upscale").mock(
+            return_value=httpx.Response(402, json=error_body("insufficient_credits"))
+        )
+        with pytest.raises(AbyssaleAPIError) as caught:
+            client.upscale({"image_url": "https://e.com/a.jpg"})
+        assert caught.value.id == "insufficient_credits"
+
+    def test_get_asset_job_reads_typed_outputs_and_credits(
+        self, client: Abyssale, respx_mock: respx.MockRouter
+    ) -> None:
+        output = {"type": "image", "url": "https://s3.example/out.webp", "mime_type": None}
+        respx_mock.get(f"{BASE_URL}/asset-jobs/{JOB_ID}").mock(
+            return_value=httpx.Response(
+                200,
+                json=asset_job(
+                    "COMPLETED",
+                    outputs=[output],
+                    credits={"generation_credits": 0, "ai_credits": 3},
+                    finalized_at="2026-11-09T10:00:07Z",
+                ),
+            )
+        )
+        job = client.get_asset_job(JOB_ID)
+        assert isinstance(job, AssetJob)
+        assert str(job.outputs[0].url) == "https://s3.example/out.webp"
+        assert job.outputs[0].mime_type is None
+        assert job.credits.ai_credits == 3
+
+    def test_list_ai_models_without_an_operation_is_the_catalog(
+        self, client: Abyssale, respx_mock: respx.MockRouter
+    ) -> None:
+        listing = {"operation": "images_upscale", "default_model": "topaz-precision", "models": []}
+        route = respx_mock.get(f"{BASE_URL}/ai-models").mock(
+            return_value=httpx.Response(200, json={"operations": [listing]})
+        )
+        catalog = client.list_ai_models()
+        assert route.calls.last.request.url.query == b""
+        assert isinstance(catalog, AiModelCatalog)
+        assert isinstance(catalog.operations[0], AiModelListing)
+
+    def test_list_ai_models_with_an_operation_is_one_listing(
+        self, client: Abyssale, respx_mock: respx.MockRouter
+    ) -> None:
+        model = {
+            "id": "topaz-precision",
+            "name": "Topaz Precision",
+            "is_default": True,
+            "upscale_factors": {"allowed": ["1", "2", "3", "4"], "default": "2"},
+        }
+        route = respx_mock.get(f"{BASE_URL}/ai-models").mock(
+            return_value=httpx.Response(
+                200, json={"operation": "images_upscale", "default_model": "topaz-precision", "models": [model]}
+            )
+        )
+        listing = client.list_ai_models(operation="images_upscale")
+        assert route.calls.last.request.url.params["operation"] == "images_upscale"
+        assert isinstance(listing, AiModelListing)
+        assert listing.models[0].upscale_factors is not None
+        assert listing.models[0].upscale_factors.default == "2"
+
+    async def test_the_async_client_reads_the_same_shapes(
+        self, async_client: AsyncAbyssale, respx_mock: respx.MockRouter
+    ) -> None:
+        respx_mock.post(f"{BASE_URL}/images/remove-background").mock(return_value=httpx.Response(202, json=QUEUED))
+        respx_mock.get(f"{BASE_URL}/ai-models").mock(return_value=httpx.Response(200, json={"operations": []}))
+        queued = await async_client.remove_background({"image_url": "https://e.com/a.jpg"})
+        assert str(queued.job_id) == JOB_ID
+        assert isinstance(await async_client.list_ai_models(), AiModelCatalog)

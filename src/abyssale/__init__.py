@@ -32,6 +32,14 @@ from ._errors import (
 )
 from ._version import __api_version__, __version__
 from .models import (
+    AiModel,
+    AiModelCatalog,
+    AiModelListing,
+    AiModelParam,
+    AssetJob,
+    AssetJobCredits,
+    AssetJobOutput,
+    AssetJobQueued,
     AuthResult,
     Banner,
     Design,
@@ -75,6 +83,14 @@ __all__ = [
     "AbyssalePollingError",
     "AbyssaleRateLimitError",
     # Models
+    "AiModel",
+    "AiModelCatalog",
+    "AiModelListing",
+    "AiModelParam",
+    "AssetJob",
+    "AssetJobCredits",
+    "AssetJobOutput",
+    "AssetJobQueued",
     "AuthResult",
     "Banner",
     "Design",

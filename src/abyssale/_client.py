@@ -19,7 +19,7 @@ import time
 from collections.abc import Mapping, Sequence
 from datetime import date
 from types import TracebackType
-from typing import Any
+from typing import Any, overload
 
 import httpx
 
@@ -31,11 +31,31 @@ from ._config import (
     resolve_timeout,
 )
 from ._errors import AbyssaleConnectionError, AbyssaleError
-from ._polling import PollLoop, check_generation_result, resolve_poll_options
+from ._polling import (
+    ASSET_JOB_FINAL_STATUSES,
+    PollLoop,
+    asset_job_status,
+    check_asset_job_result,
+    check_generation_result,
+    resolve_poll_options,
+)
 from ._retry import retry_schedule
-from ._transport import clean_query, default_headers, encode_path, raise_for_status, validate, validate_list
+from ._transport import (
+    clean_query,
+    default_headers,
+    encode_path,
+    parse_ai_models,
+    raise_for_status,
+    validate,
+    validate_list,
+)
 from ._version import __version__
 from .models import (
+    AiModelCatalog,
+    AiModelListing,
+    AiOperation,
+    AssetJob,
+    AssetJobQueued,
     AuthResult,
     Banner,
     CreditsBalance,
@@ -568,6 +588,100 @@ class Abyssale:
         path = encode_path("/designs/{design_id}/dynamic-image-url", design_id=design_id)
         return validate(DynamicImageResponse, self._request("POST", path, json=body or {}))
 
+    # ── AI asset jobs ─────────────────────────────────────────────────────────
+    #
+    # Each action starts a job and answers ``{job_id, status: "PENDING"}`` in milliseconds; the work
+    # runs in the background. Wait for it with :meth:`wait_for_asset_job`, or pass a
+    # ``callback_url`` to receive the ``ASSET_JOB_FINALIZED`` webhook once it ends. Errors worth
+    # branching on: ``insufficient_credits`` (402), ``too_many_asset_jobs`` (429 — at most 5 jobs
+    # pending or processing per workspace), ``unknown_enum_value`` / ``ai_model_disabled`` (400),
+    # ``ai_service_unavailable`` / ``asset_jobs_disabled`` (503 — nothing was queued or charged).
+
+    def remove_background(self, body: Body) -> AssetJobQueued:
+        """Remove an image's background, with an AI model. Spends AI credits.
+
+        ``image_url`` is required; ``model`` is optional (the workspace default otherwise — see
+        :meth:`list_ai_models`), ``crop`` crops the transparent edges off the result.
+
+        Example
+        -------
+        ::
+
+            queued = client.remove_background({"image_url": "https://example.com/product.jpg", "crop": True})
+            job = client.wait_for_asset_job(str(queued.job_id))
+            print(job.outputs[0].url)
+        """
+        return validate(AssetJobQueued, self._request("POST", "/images/remove-background", json=body))
+
+    def text_to_image(self, body: Body) -> AssetJobQueued:
+        """Generate an image from a prompt, with an AI model. Spends AI credits.
+
+        ``prompt`` is required. ``aspect_ratio`` and ``quality`` must be values the model lists in
+        ``list_ai_models(operation="images_text_to_image")``; ``reference_image_urls`` guide the
+        generation, for models that take them (``max_reference_images``).
+
+        Example
+        -------
+        ::
+
+            queued = client.text_to_image({
+                "prompt": "A red fox sitting in fresh snow at sunrise, soft light",
+                "aspect_ratio": "16:9",
+            })
+            job = client.wait_for_asset_job(str(queued.job_id))
+        """
+        return validate(AssetJobQueued, self._request("POST", "/images/text-to-image", json=body))
+
+    def upscale(self, body: Body) -> AssetJobQueued:
+        """Upscale an image, with an AI model. Spends AI credits, priced on the output size.
+
+        A balance short of the real price fails the job ``insufficient_credits`` after it was
+        accepted. ``upscale_factor`` is one of the model's ``upscale_factors`` in
+        ``list_ai_models(operation="images_upscale")``, as a number or a string.
+
+        Example
+        -------
+        ::
+
+            queued = client.upscale({"image_url": "https://example.com/product.jpg", "upscale_factor": 2})
+        """
+        return validate(AssetJobQueued, self._request("POST", "/images/upscale", json=body))
+
+    def get_asset_job(self, job_id: str) -> AssetJob:
+        """Read an asset job: ``PENDING`` → ``PROCESSING`` → ``COMPLETED`` or ``FAILED``.
+
+        ``outputs`` is empty until ``COMPLETED``; each output's ``url`` is signed and valid 7 days, so
+        download the file to keep it. ``error`` says why a ``FAILED`` job failed, and ``credits`` what
+        it spent. A job finished more than 7 days ago raises ``asset_job_not_found``. Prefer
+        :meth:`wait_for_asset_job`, which handles the schedule for you.
+        """
+        return validate(AssetJob, self._request("GET", encode_path("/asset-jobs/{job_id}", job_id=job_id)))
+
+    @overload
+    def list_ai_models(self, *, operation: None = None) -> AiModelCatalog: ...
+
+    @overload
+    def list_ai_models(self, *, operation: AiOperation) -> AiModelListing: ...
+
+    def list_ai_models(self, *, operation: str | None = None) -> AiModelListing | AiModelCatalog:
+        """List the AI models the workspace can use, and the default used when a request names none.
+
+        Without ``operation``, every action is listed (an :class:`AiModelCatalog`); with one of
+        ``images_remove_background``, ``images_text_to_image``, ``images_upscale``, that action alone
+        (an :class:`AiModelListing`). Per model: ``aspect_ratios``, ``qualities``,
+        ``upscale_factors``, ``max_reference_images``. No prices — what a job cost is on the job.
+
+        Example
+        -------
+        ::
+
+            listing = client.list_ai_models(operation="images_text_to_image")
+            for model in listing.models:
+                print(model.id, model.aspect_ratios.allowed if model.aspect_ratios else [])
+        """
+        data = self._request("GET", "/ai-models", query={"operation": operation})
+        return parse_ai_models(data)
+
     # ── Workspace templates ───────────────────────────────────────────────────
 
     def list_workspace_templates(
@@ -685,4 +799,39 @@ class Abyssale:
                 loop.succeeded()
                 if str(getattr(data.status, "value", data.status)) in ("COMPLETED", "ERROR"):
                     return data
+            time.sleep(loop.next_wait())
+
+    def wait_for_asset_job(
+        self,
+        job_id: str,
+        *,
+        interval: float | None = None,
+        max_interval: float | None = None,
+        timeout: float | None = None,
+    ) -> AssetJob:
+        """Wait for an AI asset job to end, polling with exponential backoff.
+
+        Returns the job when it is ``COMPLETED``. A ``FAILED`` job raises
+        :class:`~abyssale.AbyssalePollingError` naming its ``error.code`` — e.g.
+        ``invalid_input_asset`` when an input image could not be downloaded; the failed job is on
+        ``__cause__.args[0]``. Options as for :meth:`wait_for_generation_request`.
+
+        Example
+        -------
+        ::
+
+            queued = client.remove_background({"image_url": "https://example.com/product.jpg"})
+            job = client.wait_for_asset_job(str(queued.job_id))
+            print(job.outputs[0].url, job.credits.ai_credits, "AI credits")
+        """
+        loop = PollLoop(resolve_poll_options(interval, max_interval, timeout), self.max_retry_wait)
+        while True:
+            try:
+                data = self.get_asset_job(job_id)
+            except AbyssaleError as err:
+                loop.absorb(err)
+            else:
+                loop.succeeded()
+                if asset_job_status(data) in ASSET_JOB_FINAL_STATUSES:
+                    return check_asset_job_result(data)
             time.sleep(loop.next_wait())

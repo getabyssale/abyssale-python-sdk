@@ -60,11 +60,16 @@ SPEC_OPERATION_IDS = {
     "getSigningSecret",
     "rotateSigningSecret",
     "revokeSigningSecret",
+    "removeBackground",
+    "textToImage",
+    "upscale",
+    "getAssetJob",
+    "listAiModels",
 }
 
-#: The only methods that are not a spec operation. They drive the spec's two status endpoints on a
+#: The only methods that are not a spec operation. They drive the spec's three status endpoints on a
 #: schedule; they add no call of their own.
-HELPERS = {"wait_for_generation_request", "wait_for_duplication_request"}
+HELPERS = {"wait_for_generation_request", "wait_for_duplication_request", "wait_for_asset_job"}
 
 
 def snake(operation_id: str) -> str:
@@ -81,7 +86,7 @@ def test_every_method_is_a_spec_operation() -> None:
     assert SYNC_METHODS - HELPERS == {snake(op) for op in SPEC_OPERATION_IDS}
 
 
-def test_the_surface_is_the_twenty_five_endpoints_plus_two_helpers() -> None:
+def test_the_surface_is_the_thirty_endpoints_plus_three_helpers() -> None:
     # Pinned so that adding an endpoint is a deliberate act, in both clients and in the docs.
     assert SYNC_METHODS == {
         "verify_api_key",
@@ -109,8 +114,14 @@ def test_the_surface_is_the_twenty_five_endpoints_plus_two_helpers() -> None:
         "get_signing_secret",
         "rotate_signing_secret",
         "revoke_signing_secret",
+        "remove_background",
+        "text_to_image",
+        "upscale",
+        "get_asset_job",
+        "list_ai_models",
         "wait_for_generation_request",
         "wait_for_duplication_request",
+        "wait_for_asset_job",
     }
 
 

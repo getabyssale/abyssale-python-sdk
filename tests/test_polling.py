@@ -240,3 +240,71 @@ class TestAsyncPolling:
         )
         with pytest.raises(AbyssalePollingError):
             await async_client.wait_for_generation_request(REQUEST_ID)
+
+
+JOB_ID = "8f0c2a4e-4869-11f0-96f2-0a00d9eb8f78"
+OUTPUT = {"type": "image", "url": "https://s3.example/out.webp", "mime_type": "image/webp"}
+
+
+def asset_job(status: str, **extra: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "job_id": JOB_ID,
+        "operation": "images_remove_background",
+        "status": status,
+        "outputs": [],
+        "credits": {"generation_credits": 0, "ai_credits": 0},
+        "error": None,
+        "created_at": "2026-11-09T10:00:00Z",
+        "finalized_at": None,
+    }
+    body.update(extra)
+    return body
+
+
+class TestWaitForAssetJob:
+    def test_it_polls_until_completed_and_returns_the_job(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        route = respx_mock.get(f"{BASE_URL}/asset-jobs/{JOB_ID}").mock(
+            side_effect=[
+                httpx.Response(200, json=asset_job("PENDING")),
+                httpx.Response(200, json=asset_job("PROCESSING")),
+                httpx.Response(200, json=asset_job("COMPLETED", outputs=[OUTPUT])),
+            ]
+        )
+        job = client.wait_for_asset_job(JOB_ID)
+        assert str(job.outputs[0].url) == OUTPUT["url"]
+        assert route.call_count == 3
+
+    def test_a_failed_job_raises_naming_its_code(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        failed = asset_job(
+            "FAILED", error={"code": "invalid_input_asset", "message": "The image was not found (HTTP 404)."}
+        )
+        route = respx_mock.get(f"{BASE_URL}/asset-jobs/{JOB_ID}").mock(return_value=httpx.Response(200, json=failed))
+        with pytest.raises(AbyssalePollingError, match="invalid_input_asset") as caught:
+            client.wait_for_asset_job(JOB_ID)
+        # `id` is reserved for an API error body — the poll itself answered 200.
+        assert caught.value.id is None
+        cause = caught.value.__cause__
+        assert cause is not None
+        assert str(getattr(cause.args[0].status, "value", cause.args[0].status)) == "FAILED"
+        assert route.call_count == 1
+
+    def test_an_unknown_job_fails_on_the_first_poll(self, client: Abyssale, respx_mock: respx.MockRouter) -> None:
+        route = respx_mock.get(f"{BASE_URL}/asset-jobs/{JOB_ID}").mock(
+            return_value=httpx.Response(404, json=error_body("asset_job_not_found"))
+        )
+        with pytest.raises(AbyssalePollingError) as caught:
+            client.wait_for_asset_job(JOB_ID)
+        assert caught.value.id == "asset_job_not_found"
+        assert route.call_count == 1
+
+    async def test_the_async_client_waits_the_same_way(
+        self, async_client: AsyncAbyssale, respx_mock: respx.MockRouter
+    ) -> None:
+        respx_mock.get(f"{BASE_URL}/asset-jobs/{JOB_ID}").mock(
+            side_effect=[
+                httpx.Response(200, json=asset_job("PROCESSING")),
+                httpx.Response(200, json=asset_job("FAILED", error={"code": "invalid_input", "message": "refused"})),
+            ]
+        )
+        with pytest.raises(AbyssalePollingError, match="invalid_input"):
+            await async_client.wait_for_asset_job(JOB_ID)

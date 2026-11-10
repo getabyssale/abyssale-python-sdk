@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
+from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
 
 class SigningSecret(BaseModel):
@@ -1244,6 +1244,164 @@ class CreditsBalance(BaseModel):
     ]
 
 
+class Status(Enum):
+    """
+    Always `PENDING` here.
+    """
+
+    PENDING = 'PENDING'
+
+
+class AssetJobQueued(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    job_id: Annotated[
+        UUID,
+        Field(
+            description='Identifier of the job — poll `GET /asset-jobs/{jobId}` with it.',
+            examples=['8f0c2a4e-4869-11f0-96f2-0a00d9eb8f78'],
+        ),
+    ]
+    status: Annotated[Status, Field(description='Always `PENDING` here.')]
+    version: Annotated[
+        str | None,
+        Field(
+            description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
+            examples=['v2026-11-09'],
+            pattern='^v\\d{4}-\\d{2}-\\d{2}$',
+        ),
+    ] = None
+
+
+class Status1(Enum):
+    """
+    `PENDING` (queued) → `PROCESSING` → `COMPLETED` or `FAILED`. The last two are final;
+    a job never leaves them.
+
+    """
+
+    PENDING = 'PENDING'
+    PROCESSING = 'PROCESSING'
+    COMPLETED = 'COMPLETED'
+    FAILED = 'FAILED'
+
+
+class Error(BaseModel):
+    """
+    Why the job failed, only when `FAILED`; `null` otherwise.
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    code: Annotated[
+        str,
+        Field(
+            description="Machine-readable reason. Not a closed list: treat a code you do not know as\ngeneric. For example:\n\n- `invalid_input_asset` — an input image (the image of a background removal, a\n  reference image of a text to image) could not be downloaded or read.\n- `invalid_input` — the provider refused the request's inputs (for a text to image,\n  typically a prompt it would not generate).\n- `insufficient_credits` — the AI credit balance ran out before the job ran.\n",
+            examples=['invalid_input_asset'],
+        ),
+    ]
+    message: Annotated[
+        str,
+        Field(
+            description='Plain-language reason, safe to show to an end user.',
+            examples=[
+                'The image https://example.com/product.jpg was not found (HTTP 404). Check the URL.'
+            ],
+        ),
+    ]
+
+
+class AssetJobCredits(BaseModel):
+    """
+    What the job has spent so far — the same two balances, under the same names, as `GET /credits`. `0` until the job completes.
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    generation_credits: Annotated[
+        int,
+        Field(
+            description="Generation credits the job has spent so far; final once `COMPLETED`. `0` when the action doesn't spend them (every action today).",
+            examples=[0],
+            ge=0,
+        ),
+    ]
+    ai_credits: Annotated[
+        int,
+        Field(
+            description='AI credits the job has spent so far; final once `COMPLETED`.',
+            examples=[3],
+            ge=0,
+        ),
+    ]
+
+
+class AssetJobOutput(BaseModel):
+    """
+    One thing an asset job produced. `type` says what it is and which fields it always carries:
+
+    - `image` — `url` and `mime_type`.
+
+    Only `image` exists today. Not a closed list: more types (`video`, `audio`, `text`) come with
+    the actions that produce them, so skip an output whose `type` you do not know.
+
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: Annotated[
+        str,
+        Field(
+            description='What the output is. `image` today; not a closed list.',
+            examples=['image'],
+        ),
+    ]
+    url: Annotated[
+        AnyUrl,
+        Field(
+            description='Link to the file, signed and valid 7 days from the response that carried it. Download\nthe file to keep it. The link only answers `GET`: a `HEAD` request on it answers `403`.\n',
+            examples=[
+                'https://production-banners.s3.eu-west-1.amazonaws.com/tmp_ai/4b1d6e2a-9c3f-4a7e-8b5d-2f6c1a9e7d40/8f0c2a4e-4869-11f0-96f2-0a00d9eb8f78.webp'
+            ],
+        ),
+    ]
+    mime_type: Annotated[
+        str,
+        Field(
+            description="The file's media type, e.g. `image/webp`, `image/png` or `image/jpeg`. `null` in the rare\ncase the type could not be read; `url` is always there.\n",
+            examples=['image/webp'],
+        ),
+    ]
+
+
+class AiModelParam(BaseModel):
+    """
+    A parameter the model accepts: on `images_text_to_image` models, `aspect_ratios` → `aspect_ratio` and `qualities` → `quality`; on `images_upscale` models, `upscale_factors` → `upscale_factor`. Absent when the model does not take the parameter: omit it from the request then.
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    allowed: Annotated[
+        list[str],
+        Field(
+            description='The values the model accepts, exactly as to pass them.',
+            examples=[['1:1', '16:9', '9:16', '4:3', '3:4']],
+        ),
+    ]
+    default: Annotated[
+        str,
+        Field(
+            description='The value used when the request omits the parameter.',
+            examples=['1:1'],
+        ),
+    ]
+
+
 class SharedElementProperties(BaseModel):
     """
     Properties every layer type accepts, whatever its type. Composed into `Element` and `AsyncElement` with `allOf` so they survive the per-type `anyOf` — declared as a sibling of `anyOf` they would be dropped from every branch.
@@ -1393,7 +1551,7 @@ class FocusTarget(Enum):
     all = 'all'
 
 
-class Model(Enum):
+class Model1(Enum):
     """
     Model used for focusing. `generic` for objects, `people` for human subjects.
     Default is `generic`.
@@ -1453,7 +1611,7 @@ class AutoFocusProperties(BaseModel):
         extra='allow',
     )
     model: Annotated[
-        Model | None,
+        Model1 | None,
         Field(
             description='Model used for focusing. `generic` for objects, `people` for human subjects.\nDefault is `generic`.\n\n**`face` is deprecated** — use `people` with `focus_framing: "face"`, which\ndetects faces with the same model and additionally honours `focus_zoom` and\n`focus_target`. `face` ignores all three. `face` keeps working; no removal date\nis set.\n'
         ),
@@ -1484,7 +1642,7 @@ class AutoFocusProperties(BaseModel):
     ] = None
 
 
-class Model1(Enum):
+class Model2(Enum):
     """
     Background removal model to use. Default is `bria-rmbg-2-0`.
     """
@@ -1512,7 +1670,7 @@ class RemoveBgProperties1(BaseModel):
         ),
     ] = None
     model: Annotated[
-        Model1 | None,
+        Model2 | None,
         Field(
             description='Background removal model to use. Default is `bria-rmbg-2-0`.'
         ),
@@ -1556,7 +1714,7 @@ class FocusTarget2(Enum):
     all = 'all'
 
 
-class Model2(Enum):
+class Model3(Enum):
     """
     Model used for focusing. `generic` for objects, `people` for human subjects.
     Default is `generic`.
@@ -1616,7 +1774,7 @@ class AutoFocusProperties1(BaseModel):
         extra='allow',
     )
     model: Annotated[
-        Model2 | None,
+        Model3 | None,
         Field(
             description='Model used for focusing. `generic` for objects, `people` for human subjects.\nDefault is `generic`.\n\n**`face` is deprecated** — use `people` with `focus_framing: "face"`, which\ndetects faces with the same model and additionally honours `focus_zoom` and\n`focus_target`. `face` ignores all three. `face` keeps working; no removal date\nis set.\n'
         ),
@@ -1647,7 +1805,7 @@ class AutoFocusProperties1(BaseModel):
     ] = None
 
 
-class Model3(Enum):
+class Model4(Enum):
     """
     Model used for expansion. Default is `flux-2-pro-outpaint`.
     """
@@ -1666,14 +1824,14 @@ class ExpandProperties(BaseModel):
         extra='allow',
     )
     model: Annotated[
-        Model3 | None,
+        Model4 | None,
         Field(
             description='Model used for expansion. Default is `flux-2-pro-outpaint`.'
         ),
     ] = None
 
 
-class Model4(Enum):
+class Model5(Enum):
     """
     Model used for upscaling. Default is `seedvr-upscale`.
     Each model caps its output size and accepts its own `upscale_factor` values:
@@ -1716,7 +1874,7 @@ class UpscaleProperties(BaseModel):
         extra='allow',
     )
     model: Annotated[
-        Model4 | None,
+        Model5 | None,
         Field(
             description='Model used for upscaling. Default is `seedvr-upscale`.\nEach model caps its output size and accepts its own `upscale_factor` values:\n\n| Model | `upscale_factor` | Max output |\n|---|---|---|\n| `seedvr-upscale` | 1, 2, 3, 4 | 64 MP |\n| `topaz-precision` | 1, 2, 3, 4 | 72 MP |\n| `crystal-upscaler` | 1, 2, 3, 4 | 16 MP |\n| `bria-increase-resolution` | 2, 4 | 8192 px |\n'
         ),
@@ -1729,7 +1887,7 @@ class UpscaleProperties(BaseModel):
     ] = None
 
 
-class Model5(Enum):
+class Model6(Enum):
     """
     Model used for generation. Default is `nano-banana-2`.
     Allowed `ratio` and `quality` values depend on the selected model — see the
@@ -1778,7 +1936,7 @@ class TextToImageProperties(BaseModel):
         ),
     ]
     model: Annotated[
-        Model5 | None,
+        Model6 | None,
         Field(
             description='Model used for generation. Default is `nano-banana-2`.\nAllowed `ratio` and `quality` values depend on the selected model — see the\n[Text to Image & Inpainting guide](https://developers.abyssale.com/rest-api/generation/element-properties/image#text-to-image-inpainting) for the full table.\n'
         ),
@@ -1865,7 +2023,7 @@ class DuplicationRequest(BaseModel):
     ] = None
 
 
-class Status(Enum):
+class Status2(Enum):
     """
     Current status of the duplication request
     """
@@ -1959,7 +2117,7 @@ class DuplicatedDesign(BaseModel):
     ]
 
 
-class Error(BaseModel):
+class Error1(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
@@ -2357,7 +2515,7 @@ class ErrorResponse(BaseModel):
     id: Annotated[
         str,
         Field(
-            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unknown_illustration`, `unreachable_src`, `invalid_query_param`,\n`invalid_filetype`, `invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These two are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`.\n\n**Retrying never helps — something has to change first.** The plan or the credit\nbalance: `feature_not_in_plan`, `api_access_denied`. Note that `rate_limit_exceeded`\nlands here too when it means "not enough credits"; the message is what tells the two\napart, which is why both entries name it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`,\n`previous_secret_still_active`, `design_in_open_product`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
+            description='Machine-readable error code. Branch on this rather than on `message`, which is prose\nand may change. **Present on every error this API returns**, on every endpoint, at\nevery status — there is no second error shape to detect.\n\nWhen `errors` is present, `id` is the response-level code: the shared code if every\nentry agrees, otherwise `invalid_payload`, meaning "read `errors`".\n\nCodes are added over time. Treat one you do not recognise as generic and fall back to\n`message`; that keeps a new code from being a breaking change.\n\nThis covers errors the generation pipeline raises downstream and this API relays:\nthey carry no code of their own, so one is derived (`format_not_found`,\n`template_not_found`, `invalid_payload`, …) and a refusal that matches none of the\nknown cases is reported as `cannot_build_banner` rather than as a bare `message`.\n\nEvery value, as of this release. The list is generated from the API\'s code registry\nand covered by a test, so it cannot drift — but it is a snapshot, not a closed enum:\ntreat an unrecognised code as generic rather than as a parse failure.\n\nGrouped by **what you should do about it**, because that is the only thing that\nchanges your code. The grouping is guidance; the status line is what the response\nactually carries, and a few codes appear twice because they genuinely mean two things.\n\n**Fix the request, then send it again.** The payload, the parameters or the headers\nwere wrong: `invalid_payload`, `invalid_json`, `wrong_type`, `missing_required`,\n`unknown_field`, `unknown_enum_value`, `unknown_format_key`, `out_of_range`,\n`mutually_exclusive`, `conditional_dependency_missing`, `duplicate_format_name`,\n`duplicate_layer_name`, `reserved_format_name`, `unsupported_for_type`,\n`unknown_font`, `unknown_illustration`, `unreachable_src`, `invalid_query_param`,\n`invalid_filetype`, `invalid_design_type`, `template_not_static`, `more_than_one_format`,\n`missing_assets`, `not_round_trippable`, `unsupported_media_type`, `not_acceptable`,\n`method_not_allowed`.\n\n**Fix the identifier.** The request was well-formed, but named something that does\nnot exist or does not belong to this workspace: `template_not_found`,\n`format_not_found`, `visual_not_found`, `generation_request_not_found`,\n`duplication_request_not_found`, `workspace_template_not_found`, `project_not_found`,\n`not_related_to_same_template`, `not_related_to_same_format`, `not_found`,\n`endpoint_not_found`, `asset_job_not_found`.\n\n**Too late.** The job finished, but its result is no longer kept (7 days):\n`generation_request_gone`, `duplication_request_gone`. Generate again, and store the\nresult this time rather than re-polling for it later.\n\n**Back off, then retry.** These are the only ones worth a retry loop:\n`request_rate_limited`, `rate_limit_exceeded`, and for asset jobs\n`too_many_asset_jobs` (wait for a running job to finish), `asset_jobs_disabled` and\n`ai_service_unavailable` (nothing was started or charged; retry later).\n\n**Retrying never helps — something has to change first.** The plan, the credit\nbalance or the workspace settings: `feature_not_in_plan`, `api_access_denied`,\n`insufficient_credits` (AI credits), `ai_model_disabled` (the model is disabled in the\nworkspace settings). Note that `rate_limit_exceeded` lands here too when it means "not\nenough credits"; the message is what tells the two apart, which is why both entries\nname it.\n\n**Authenticate.** `unauthorized` for a missing, unknown or revoked key;\n`api_access_denied` when the key is valid but the plan excludes API access. There is\nno 403 in this API.\n\n**The resource is in the wrong state for this call.** Read it back to find out which:\n`template_import_already_processed`, `project_already_exists`, `template_not_active`,\n`previous_secret_still_active`, `design_in_open_product`.\n\n**Valid request, unrenderable content.** The engine accepted the call and then\nrefused the artwork — most often text that cannot fit its layer:\n`cannot_build_banner`, `image_fetching_error`.\n\n**Ours, not yours.** Retry once; if it persists, send us the response:\n`internal_error`, `internal_server_error`.\n'
         ),
     ]
     errors: Annotated[
@@ -2490,6 +2648,129 @@ class DesignElement(BaseModel):
         ),
     ] = None
     attributes: Annotated[list[Attribute], Field(description='List of all attributes')]
+
+
+class AssetJob(BaseModel):
+    """
+    An asset job, as the poll returns it and as the `ASSET_JOB_FINALIZED` webhook carries it.
+    """
+
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    job_id: Annotated[
+        UUID,
+        Field(
+            description='Identifier of the job.',
+            examples=['8f0c2a4e-4869-11f0-96f2-0a00d9eb8f78'],
+        ),
+    ]
+    operation: Annotated[
+        str,
+        Field(
+            description='The action the job runs, named `{media}_{tool}` after its path (`POST /images/upscale` →\n`images_upscale`): `images_remove_background`, `images_text_to_image`, `images_upscale`.\nNot a closed list: more actions are added over time, so treat a value you do not know as\ngeneric.\n',
+            examples=['images_remove_background'],
+        ),
+    ]
+    status: Annotated[
+        Status1,
+        Field(
+            description='`PENDING` (queued) → `PROCESSING` → `COMPLETED` or `FAILED`. The last two are final;\na job never leaves them.\n'
+        ),
+    ]
+    outputs: Annotated[
+        list[AssetJobOutput],
+        Field(
+            description='What the job produced, each output typed — one image for every action today. Always an array: empty until `COMPLETED`, and on a failed job.'
+        ),
+    ]
+    credits: Annotated[
+        AssetJobCredits,
+        Field(description='What the job has spent so far, in every status.'),
+    ]
+    error: Annotated[
+        Error,
+        Field(description='Why the job failed, only when `FAILED`; `null` otherwise.'),
+    ]
+    created_at: Annotated[
+        AwareDatetime,
+        Field(
+            description='When the job was started (UTC).',
+            examples=['2026-09-21T14:13:20Z'],
+        ),
+    ]
+    finalized_at: Annotated[
+        AwareDatetime,
+        Field(
+            description='When the job reached `COMPLETED` or `FAILED` (UTC); `null` before.',
+            examples=['2026-09-21T14:13:27Z'],
+        ),
+    ]
+    version: Annotated[
+        str | None,
+        Field(
+            description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
+            examples=['v2026-11-09'],
+            pattern='^v\\d{4}-\\d{2}-\\d{2}$',
+        ),
+    ] = None
+
+
+class Model(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    id: Annotated[
+        str, Field(description='The id to pass as `model`.', examples=['bria-rmbg-2-0'])
+    ]
+    name: Annotated[str, Field(description='Display name.', examples=['BRIA RMBG 2.0'])]
+    is_default: Annotated[
+        bool, Field(description='Whether this is `default_model`.', examples=[True])
+    ]
+    aspect_ratios: AiModelParam | None = None
+    qualities: AiModelParam | None = None
+    upscale_factors: AiModelParam | None = None
+    max_reference_images: Annotated[
+        int | None,
+        Field(
+            description='How many `reference_image_urls` the text to image action takes at most with this\nmodel. Absent when the model takes no reference images.\n',
+            examples=[8],
+        ),
+    ] = None
+
+
+class AiModelListing(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    operation: Annotated[
+        str,
+        Field(
+            description='The AI action the models are listed for.',
+            examples=['images_remove_background'],
+        ),
+    ]
+    default_model: Annotated[
+        str,
+        Field(
+            description='Id of the model used when a request names none; `null` when every model is disabled.',
+            examples=['bria-rmbg-2-0'],
+        ),
+    ]
+    models: Annotated[
+        list[Model],
+        Field(
+            description='The models the workspace can use for the action, in a stable order.'
+        ),
+    ]
+    version: Annotated[
+        str | None,
+        Field(
+            description="The API version that produced this response, named by release date (`vYYYY-MM-DD`).\nStamped as a top-level field on JSON object bodies, success and error alike, so a client\ncan always tell which contract answered. There is no version-selection parameter — a\nsingle version is maintained at a time.\n\nTwo kinds of body are **not** stamped. Array bodies (the listings) carry no envelope. And\na body that already has a `version` key of its own is left alone — which in practice means\n`Banner`, whose `version` is the generated file's integer counter. So `GET\n/banners/{bannerId}` and the synchronous generate are the two responses that do not tell\nyou which contract answered.\n\nThe value changes when a new version is released. Match the `vYYYY-MM-DD` shape rather than\npinning today's literal, or your client breaks on the next release.\n",
+            examples=['v2026-11-09'],
+            pattern='^v\\d{4}-\\d{2}-\\d{2}$',
+        ),
+    ] = None
 
 
 class RootElement(BaseModel):
@@ -3224,7 +3505,7 @@ class DuplicationRequestStatus(BaseModel):
         ),
     ]
     status: Annotated[
-        Status,
+        Status2,
         Field(
             description='Current status of the duplication request',
             examples=['COMPLETED'],
@@ -3284,7 +3565,7 @@ class GenerationRequestStatus(BaseModel):
         Field(description='List of generated files (populated once finalized)'),
     ]
     errors: Annotated[
-        list[Error] | None,
+        list[Error1] | None,
         Field(description='Per-format errors, if any occurred during generation'),
     ] = None
     version: Annotated[

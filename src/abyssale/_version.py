@@ -4,7 +4,7 @@ Kept in step with ``version`` in ``pyproject.toml`` by hand; there are two of th
 that bumps only one ships a User-Agent that lies.
 """
 
-__version__ = "1.8.0"
+__version__ = "1.9.0"
 
 #: The API version this SDK's models were generated from (`vYYYY-MM-DD`, the API's own scheme).
 #:
